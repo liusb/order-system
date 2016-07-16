@@ -102,7 +102,7 @@ public interface OrderSystem {
   /**
    * 查询订单号为orderid的指定字段
    * 
-   * @param orderid
+   * @param orderId
    *          订单号
    * @param keys
    *          待查询的字段，如果为null，则查询所有字段，如果为空，则排除所有字段
