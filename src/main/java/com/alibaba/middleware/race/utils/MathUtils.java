@@ -6,4 +6,7 @@ public class MathUtils {
         return a == b ? 0 : a < b ? -1 : 1;
     }
 
+    public static int compareLong(long a, long b) {
+        return a == b ? 0 : a < b ? -1 : 1;
+    }
 }

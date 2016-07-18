@@ -1,7 +1,8 @@
 package com.alibaba.middleware.race.worker;
 
+import com.alibaba.middleware.race.index.HashIndex;
 import com.alibaba.middleware.race.store.Data;
-import com.alibaba.middleware.race.store.PageFile;
+import com.alibaba.middleware.race.store.PageStore;
 import com.alibaba.middleware.race.table.Row;
 import com.alibaba.middleware.race.utils.Constants;
 
@@ -12,14 +13,16 @@ public class Writer implements Runnable {
     private LinkedBlockingQueue<Row> in;
     private Data buffer;
     private Row row;
-    private PageFile pageFile;
+    private PageStore pageFile;
+    private HashIndex index;
     private long inCount;
     private long threadId;
 
-    public Writer(LinkedBlockingQueue<Row> in, PageFile pageFile) {
+    public Writer(LinkedBlockingQueue<Row> in, PageStore pageFile, HashIndex index) {
         this.in = in;
         this.pageFile = pageFile;
-        this.buffer = new Data(new byte[Constants.PAGE_SIZE*(1<<10)]);
+        this.index = index;
+        this.buffer = new Data(new byte[Constants.PAGE_SIZE]);
         this.row = null;
         this.inCount = 0;
         this.threadId = 0;
@@ -48,12 +51,15 @@ public class Writer implements Runnable {
             if(row.isEmpty()) {
                 break;
             }
-            int len = row.writeToBytes(buffer);
+            row.writeToBytes(buffer);
+            int PageId = index.getBucketIndex(row.getHashCode());
+            pageFile.insertData(PageId, buffer);
             inCount++;
             if(inCount % 30 == 0) {
                 System.out.println("INFO: Writer count is:" + inCount + ". Thread id:" + threadId);
             }
         }
+        this.pageFile.close();
         System.out.println("INFO: Writer thread completed. Thread id:" + threadId);
     }
 }

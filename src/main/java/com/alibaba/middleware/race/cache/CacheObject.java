@@ -15,18 +15,29 @@ public abstract class CacheObject implements Comparable<CacheObject> {
     private boolean changed;
 
     // 记录缓存在文件中的位置，当写入多个内容改变的缓存时排序后可以顺序写入
-    private int pos;
+    protected long posInFile;
+
+    // 缓存放置的位置
+    private int posInCache;
 
     public abstract int getMemory();
 
     public abstract boolean canRemove();
 
-    public void setPos(int pos) {
-        this.pos = pos;
+    public void setPosInFile(long posInFile) {
+        this.posInFile = posInFile;
     }
 
-    public int getPos() {
-        return pos;
+    public long getPosInFile() {
+        return posInFile;
+    }
+
+    public void setPosInCache(int posInCache) {
+        this.posInCache = posInCache;
+    }
+
+    public int getPosInCache() {
+        return posInCache;
     }
 
     public boolean isChanged() {
@@ -39,6 +50,6 @@ public abstract class CacheObject implements Comparable<CacheObject> {
 
     @Override
     public int compareTo(CacheObject other) {
-        return MathUtils.compareInt(getPos(), other.getPos());
+        return MathUtils.compareLong(getPosInFile(), other.getPosInFile());
     }
 }

@@ -1,7 +1,7 @@
 package com.alibaba.middleware.race.worker;
 
 import com.alibaba.middleware.race.index.HashIndex;
-import com.alibaba.middleware.race.store.PageFile;
+import com.alibaba.middleware.race.store.PageStore;
 import com.alibaba.middleware.race.table.HashTable;
 import com.alibaba.middleware.race.table.Row;
 import com.alibaba.middleware.race.table.TableManager;
@@ -37,15 +37,16 @@ public class WorkerManager {
     }
 
     private void processGoodRecord() {
+        int bucketBitSize = 10;
         HashTable goodTable = TableManager.instance().goodTable;
-        goodTable.init(this.storeFolders, "goodid");
-        HashIndex index = new HashIndex(10, 3);
+        goodTable.init(this.storeFolders, "goodid", 1<<bucketBitSize);
+        HashIndex index = new HashIndex(bucketBitSize, 3);
         goodTable.setIndex(index);
         ArrayList<LinkedBlockingQueue<String>> inQueues = createQueues(4, 16);
         ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(this.storeFolders.size(), 16);
         ArrayList<Reader> readers = createReaders(goodFiles, inQueues);
         ArrayList<Parser> parsers = createParser(inQueues, outQueues, goodTable, index);
-        ArrayList<Writer> writers = createWriter(outQueues, goodTable.getPageFiles());
+        ArrayList<Writer> writers = createWriter(outQueues, goodTable.getPageFiles(), index);
         ArrayList<Thread> readerThreads = new ArrayList<Thread>();
         for (Reader reader: readers) {
             readerThreads.add(new Thread(reader));
@@ -155,10 +156,10 @@ public class WorkerManager {
     }
 
     private static ArrayList<Writer> createWriter(ArrayList<LinkedBlockingQueue<Row>> outQueues,
-                                                  ArrayList<PageFile> pageFiles) {
+                                                  ArrayList<PageStore> pageFiles, HashIndex index) {
         ArrayList<Writer> writers = new ArrayList<Writer>();
         for (int i=0; i< outQueues.size(); i++) {
-            writers.add(new Writer(outQueues.get(i), pageFiles.get(i)));
+            writers.add(new Writer(outQueues.get(i), pageFiles.get(i), index));
         }
         return writers;
     }

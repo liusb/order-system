@@ -58,10 +58,6 @@ public class FilePath {
         return -1;
     }
 
-    public static boolean isWritable(String file) {
-        return Files.isWritable( Paths.get(file));
-    }
-
     public static void main(String[] args) {
 
         if(exists("./store")) {

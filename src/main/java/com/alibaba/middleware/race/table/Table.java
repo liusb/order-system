@@ -1,13 +1,13 @@
 package com.alibaba.middleware.race.table;
 
-import com.alibaba.middleware.race.store.PageFile;
+import com.alibaba.middleware.race.store.PageStore;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 
 public abstract class Table {
     protected HashMap<String, Column> columns;
-    protected ArrayList<PageFile> storeFiles;
+    protected ArrayList<PageStore> storeFiles;
     protected String name;
 
     public Column getColumn(String name) {
@@ -30,7 +30,7 @@ public abstract class Table {
         }
     }
 
-    public ArrayList<PageFile> getPageFiles() {
+    public ArrayList<PageStore> getPageFiles() {
         return this.storeFiles;
     }
 }

@@ -6,5 +6,5 @@ public class Constants {
     public static final int LENGTH_LONG = 8;
     public static final int LENGTH_DOUBLE = 8;
 
-    public static final int PAGE_SIZE = 16;
+    public static final int PAGE_SIZE = 16*1024;  // 16KB
 }

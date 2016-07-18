@@ -6,30 +6,25 @@ import java.nio.ByteBuffer;
 public class FileStore {
 
     private String name;
-    private FileIO  file;
-    private long filePos;
+    private FileIO file;
+    private long posInFile;
     private long fileLength;
 
     protected FileStore(String name, String mode) {
         this.name = name;
         try {
             boolean exists = FilePath.exists(name);
-            if (exists && !FilePath.isWritable(name)) {
-                mode = "r";
-            } else {
+            if (!exists) {
                 FilePath.createFile(name);
             }
             file = new FileIO(name, mode);
             if (exists) {
                 fileLength = file.size();
             }
+            posInFile = 0;
         } catch (IOException e) {
-            System.err.println("ERROR: name: " + name + " mode: " + mode + "," + e);
+            e.printStackTrace();
         }
-    }
-
-    public static FileStore open(String name, String mode) {
-        return new FileStore(name, mode);
     }
 
     public void close() {
@@ -48,34 +43,35 @@ public class FileStore {
         try {
             file.readFully(ByteBuffer.wrap(b, off, len));
         } catch (IOException e) {
-            System.err.println("ERROR: " + e);
+            e.printStackTrace();
         }
-        filePos += len;
+        posInFile += len;
     }
 
     public void write(byte[] b, int off, int len) {
         try {
             file.writeFully(ByteBuffer.wrap(b, off, len));
         } catch (IOException e) {
-            System.err.println("ERROR: " + e);
+            e.printStackTrace();
         }
-        filePos += len;
-        fileLength = Math.max(filePos, fileLength);
+        posInFile += len;
+        fileLength = Math.max(posInFile, fileLength);
     }
 
     public void setLength(long newLength) {
         try {
             if (newLength > fileLength) {
-                long pos = filePos;
+                long pos = posInFile;
                 file.position(newLength - 1);
                 file.writeFully(ByteBuffer.wrap(new byte[1]));
                 file.position(pos);
             } else {
                 file.truncate(newLength);
+                // throw new RuntimeException("不支持缩短文件");
             }
             fileLength = newLength;
         } catch (IOException e) {
-            System.err.println("ERROR: " + e);
+            e.printStackTrace();
         }
     }
 
@@ -85,16 +81,13 @@ public class FileStore {
 
     public void seek(long pos) {
         try {
-            if (pos != filePos) {
+            if (pos != posInFile) {
                 file.position(pos);
-                filePos = pos;
+                posInFile = pos;
             }
         } catch (IOException e) {
-            System.err.println("ERROR: " + e);
+            e.printStackTrace();
         }
     }
 
-    public long getFilePointer() {
-        return filePos;
-    }
 }

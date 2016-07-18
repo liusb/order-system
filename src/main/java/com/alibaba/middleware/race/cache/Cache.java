@@ -1,5 +1,7 @@
 package com.alibaba.middleware.race.cache;
 
+import java.util.ArrayList;
+
 public interface Cache {
 
     void clear();
@@ -14,11 +16,12 @@ public interface Cache {
 
     boolean remove(int pos);
 
-
     void setMaxMemory(int size);
 
     int getMaxMemory();
 
     int getMemory();
+
+    ArrayList<CacheObject> getAllChanged();
 
 }
