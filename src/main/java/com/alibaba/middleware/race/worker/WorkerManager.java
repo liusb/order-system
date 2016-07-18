@@ -89,6 +89,15 @@ public class WorkerManager {
         waitThreads(writerThreads);
     }
 
+    private void processBuyerRecord() {
+
+    }
+
+    private void processOrderRecord() {
+        // 初始化表文件，索引文件， 一个存储文件一个写线程
+        // buyerId -> [buyerId, address] ->
+    }
+
     public static void main(String[] args) {
         WorkerManager manager = new WorkerManager();
         ArrayList<String> storeFolders = new ArrayList<String>();
