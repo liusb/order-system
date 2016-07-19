@@ -1,5 +1,7 @@
 package com.alibaba.middleware.race.table;
 
+import com.alibaba.middleware.race.index.HashIndex;
+
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.TreeMap;
@@ -30,11 +32,13 @@ public class GoodTable {
 
     // 在构造完，准备查询前重新打开，以只读方式打开，缓存为只读，
     public void reopen() {
-
+        this.baseTable.reopen(1024);
     }
 
     public HashMap<String, Object> find(String goodId, TreeMap<Integer, String> keys) {
         HashMap<String, Object> result = new HashMap<String, Object>();
+        int hashCode = HashIndex.getHashCode(goodId);
+        int fileId = baseTable.getIndex().getFileIndex(hashCode);
         return result;
     }
 }

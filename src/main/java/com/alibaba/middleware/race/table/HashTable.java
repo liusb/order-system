@@ -28,6 +28,12 @@ public class HashTable extends Table {
         this.index = new HashIndex(bucketSize, this.storeFiles.size());
     }
 
+    public void reopen(int cacheSize) {
+        for (PageStore pageStore: this.storeFiles) {
+            pageStore.open("r", cacheSize);
+        }
+    }
+
     public void setBaseColumns(String[] columnsKeys) {
         this.columns = new HashMap<String, Column>();
         int columnsId = 0;
