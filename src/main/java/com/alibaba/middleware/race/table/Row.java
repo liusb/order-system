@@ -10,7 +10,6 @@ public class Row {
     private TreeMap<Integer, Object> values;
     private int hashCode;
 
-
     public Row() {
         this.values = new TreeMap<Integer, Object>();
         this.hashCode = 0;
@@ -46,6 +45,10 @@ public class Row {
 
     public boolean isEmpty() {
         return values.isEmpty();
+    }
+
+    public Object getValue(int columnId) {
+        return values.get(columnId);
     }
 
     /**

@@ -13,23 +13,30 @@ import java.util.Collections;
 public class PageStore implements CacheWriter {
 
     // 记录空页
-    private BitSet usedSet;
+    private final BitSet usedSet;
     private final String fileName;
+    private final int bucketSize;
+    private final int pageSize;
+
     private FileStore file;
-    private int pageSize;
+    private String mode;
+    private Cache cache;
 
-    private final Cache cache;
-
-    public PageStore(String fileName, int cacheSize) {
+    public PageStore(String fileName, int bucketSize, int pageSize) {
         this.fileName = fileName;
-        this.cache = new CacheLRU(this, cacheSize);
-        this.usedSet = new BitSet(cacheSize);
-        this.pageSize = Constants.PAGE_SIZE;
+        this.usedSet = new BitSet(bucketSize);
+        this.bucketSize = bucketSize;
+        this.pageSize = pageSize;
     }
 
-    public void open() {
+    public void open(String mode, int cacheSize) {
+        this.mode = mode;
         try {
-            this.file = new FileStore(fileName, "rw");
+            this.file = new FileStore(fileName, mode);
+            this.cache = new CacheLRU(this, cacheSize);
+            if (mode.equals("rw")) {
+                this.file.setLength(bucketSize*pageSize);
+            }
         }catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException();
@@ -38,8 +45,13 @@ public class PageStore implements CacheWriter {
 
     public void close() {
         try {
-            this.writeAllChanged();
+            if (mode.equals("rw")) {
+                this.writeAllChanged();
+            }
             this.file.close();
+            this.cache.clear();
+            this.file = null;
+            this.cache = null;
         }catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException();
@@ -69,10 +81,6 @@ public class PageStore implements CacheWriter {
     void readPage(int pos, Data page) {
         file.seek((long) pos << 4);
         file.read(page.getBytes(), 0, pageSize);
-    }
-
-    public void allocateBucket(int bucketSize) {
-        this.file.setLength(bucketSize*pageSize);
     }
 
     private Page allocateNewPage(Data data, int pageId) {
@@ -106,7 +114,8 @@ public class PageStore implements CacheWriter {
         return page;
     }
 
-    public void insertData(int pageId, Data buffer) {
+    public long insertData(int pageId, Data buffer) {
+        long address = 0;
         Page page = (Page)cache.get(pageId);
         if (page == null) {
             if (usedSet.get(pageId)) {  // 已经分配过但被置换出
@@ -135,6 +144,7 @@ public class PageStore implements CacheWriter {
                 bufferPos = buffer.getPos();
             }
         }
+        return address;
     }
 
     public void writeAllChanged() {

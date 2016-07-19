@@ -4,12 +4,13 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.TreeMap;
 
-public class GoodTable {
-    private static GoodTable instance = new GoodTable();
-    public static GoodTable getInstance() {
+public class BuyerTable {
+    private static BuyerTable instance = new BuyerTable();
+    public static BuyerTable getInstance() {
         return instance;
     }
-    private GoodTable() { }
+    private BuyerTable() { }
+
 
     // 哈希桶的总个数
     private static final int TABLE_BUCKET_SIZE = 1024;
@@ -17,13 +18,13 @@ public class GoodTable {
     private static final int TABLE_CACHE_SIZE = 1024;
     // 每页的大小，单位为byte
     private static final int TABLE_PAGE_SIZE = 16*(1<<10);
-    private static final String[] TABLE_COLUMNS = {"goodid"};
+    private static final String[] TABLE_COLUMNS = {"buyerid"};
     public HashTable baseTable;
 
 
     // 在构造之前做初始工作
     public void init(Collection<String> storeFolders) {
-        baseTable = new HashTable("goodTable");
+        baseTable = new HashTable("buyerTable");
         baseTable.setBaseColumns(TABLE_COLUMNS);
         baseTable.init(storeFolders, TABLE_BUCKET_SIZE, TABLE_CACHE_SIZE, TABLE_PAGE_SIZE);
     }
