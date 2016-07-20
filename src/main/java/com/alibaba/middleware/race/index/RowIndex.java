@@ -1,16 +1,18 @@
 package com.alibaba.middleware.race.index;
 
-public class RowIndex {
+import com.alibaba.middleware.race.store.Data;
+
+public abstract class RowIndex {
+
+    public static final long EMPTY_FLAG = -1;
 
     private byte fileId;
     private long address;
-    public Object[] values;
     private int hashCode;
 
-    public RowIndex(byte fileId, long address, int len) {
+    public RowIndex(byte fileId, long address) {
         this.fileId = fileId;
         this.address = address;
-        this.values = new Object[len];
     }
 
     public byte getFileId() {
@@ -29,11 +31,10 @@ public class RowIndex {
         return this.hashCode;
     }
 
-    public Object[] getValues() {
-        return this.values;
+    public boolean isEmpty() {
+        return address == EMPTY_FLAG;
     }
 
-    public boolean isEmpty() {
-        return values.length == 0;
-    }
+    public abstract void writeToBuffer(Data buffer);
+
 }
