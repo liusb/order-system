@@ -47,7 +47,7 @@ public class Parser implements Runnable {
             }
             Column column = this.table.getColumn(key);
             row.insert(column.getColumnId(), value);
-            if (column.getColumnId() == 0) {
+            if (column.getColumnId() == Column.FirstColumnsId) {
                 row.setHashCode(HashIndex.getHashCode(value));
             }
         }

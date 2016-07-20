@@ -4,27 +4,26 @@ import com.alibaba.middleware.race.index.HashIndex;
 import com.alibaba.middleware.race.index.RowIndex;
 import com.alibaba.middleware.race.store.Data;
 import com.alibaba.middleware.race.store.PageStore;
-import com.alibaba.middleware.race.utils.Constants;
 
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class IndexWriter implements Runnable {
+public class IndexWriter<T extends RowIndex> implements Runnable {
 
-    private LinkedBlockingQueue<RowIndex> in;
+    private LinkedBlockingQueue<T> in;
+    private T row;
     private Data buffer;
-    private RowIndex row;
     private PageStore pageFile;
     private HashIndex index;
     private long inCount;
     private long threadId;
 
-    public IndexWriter(LinkedBlockingQueue<RowIndex> in,
+    public IndexWriter(LinkedBlockingQueue<T> in,
                        PageStore pageFile, HashIndex index) {
         this.in = in;
+        this.row = null;
         this.pageFile = pageFile;
         this.index = index;
-        this.buffer = new Data(new byte[Constants.PAGE_SIZE]);
-        this.row = null;
+        this.buffer = new Data(new byte[512]);
         this.inCount = 0;
         this.threadId = 0;
     }
@@ -43,27 +42,6 @@ public class IndexWriter implements Runnable {
         }
     }
 
-    private void writeToBuffer() {
-        buffer.reset();
-        Object[] values = row.getValues();
-        if (values.length == 1) {
-            buffer.writeLong(((Long)values[0]));
-        } else {
-            buffer.writeInt(row.getHashCode());
-            for (Object value : row.getValues()) {
-                if (value instanceof Long) {
-                    buffer.writeLong(((Long) value));
-                } else if (value instanceof String) {
-                    buffer.writeString(((String) value));
-                } else {
-                    throw new RuntimeException("暂时不支持其他类型");
-                }
-            }
-        }
-        buffer.writeByte(row.getFileId());
-        buffer.writeLong(row.getAddress());
-    }
-
     @Override
     public void run() {
         this.threadId = Thread.currentThread().getId();
@@ -73,9 +51,9 @@ public class IndexWriter implements Runnable {
             if(row.isEmpty()) {
                 break;
             }
-            writeToBuffer();
+            row.writeToBuffer(buffer);
             int PageId = index.getBucketIndex(row.getHashCode());
-            pageFile.insertData(PageId, buffer);
+            pageFile.insertIndexData(PageId, buffer);
             inCount++;
             if(inCount % 30 == 0) {
                 System.out.println("INFO: Writer count is:" + inCount + ". Thread id:" + threadId);
