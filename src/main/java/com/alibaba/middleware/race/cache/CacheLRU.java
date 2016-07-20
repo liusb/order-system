@@ -1,7 +1,5 @@
 package com.alibaba.middleware.race.cache;
 
-import com.alibaba.middleware.race.utils.Constants;
-
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -24,10 +22,9 @@ public class CacheLRU implements Cache {
     // 负责Cache对象的写回
     private final CacheWriter writer;
 
-    public CacheLRU(CacheWriter writer, int cacheSize) {
+    public CacheLRU(CacheWriter writer, int cacheSize, int pageSize) {
         this.writer = writer;
-        this.maxMemory = cacheSize*Constants.PAGE_SIZE;
-        this.memory = 0;
+        this.maxMemory = cacheSize*pageSize;
         this.len = cacheSize;
         this.mask = len-1;
         clear();
@@ -40,12 +37,13 @@ public class CacheLRU implements Cache {
         values = null;  // 先释放，直接new可能导致out of memory
         values = new CacheObject[len];
         memory = len*8;  // 指针所占用内存
+        maxMemory += memory;
     }
 
     @Override
-    public CacheObject find(int posInCache) {
-        CacheObject obj = values[posInCache & mask];
-        while (obj != null && obj.getPosInCache() != posInCache) {
+    public CacheObject find(int pos) {
+        CacheObject obj = values[pos & mask];
+        while (obj != null && obj.getPos() != pos) {
             obj = obj.cacheChained;
         }
         return obj;
@@ -53,8 +51,8 @@ public class CacheLRU implements Cache {
 
     // 获取对象，并修改其位置
     @Override
-    public CacheObject get(int posInCache) {
-        CacheObject obj = find(posInCache);
+    public CacheObject get(int pos) {
+        CacheObject obj = find(pos);
         if (obj != null) {
             removeFromLinkedList(obj);
             addToFront(obj);
@@ -64,12 +62,12 @@ public class CacheLRU implements Cache {
 
     @Override
     public void put(CacheObject obj) {
-        int posInCache = obj.getPosInCache();
-        CacheObject old = find(posInCache);
+        int pos = obj.getPos();
+        CacheObject old = find(pos);
         if (old != null) {
-            System.err.println("ERROR: try to add a record twice at posInCache " + posInCache);
+            throw new RuntimeException("ERROR: try to add a record twice at pos " + pos);
         }
-        int index = obj.getPosInCache() & mask;
+        int index = obj.getPos() & mask;
         obj.cacheChained = values[index];
         values[index] = obj;
         memory += obj.getMemory();
@@ -78,13 +76,13 @@ public class CacheLRU implements Cache {
     }
 
     @Override
-    public CacheObject update(int posInCache, CacheObject obj) {
-        CacheObject old = find(posInCache);
+    public CacheObject update(int pos, CacheObject obj) {
+        CacheObject old = find(pos);
         if (old == null) {
             put(obj);
         } else {
             if (old != obj) {
-                System.err.println("ERROR: old!=record posInCache:" + posInCache + " old:" + old + " new:" + obj);
+                throw new RuntimeException("ERROR: old!=record pos:" + pos + " old:" + old + " new:" + obj);
             }
             removeFromLinkedList(obj);
             addToFront(obj);
@@ -93,13 +91,13 @@ public class CacheLRU implements Cache {
     }
 
     @Override
-    public boolean remove(int posInCache) {
-        int index = posInCache & mask;
+    public boolean remove(int pos) {
+        int index = pos & mask;
         CacheObject rec = values[index];
         if (rec == null) {
             return false;
         }
-        if (rec.getPosInCache() == posInCache) {
+        if (rec.getPos() == pos) {
             values[index] = rec.cacheChained;
         } else {
             CacheObject last;
@@ -109,7 +107,7 @@ public class CacheLRU implements Cache {
                 if (rec == null) {
                     return false;
                 }
-            } while (rec.getPosInCache() != posInCache);
+            } while (rec.getPos() != pos);
             last.cacheChained = rec.cacheChained;
         }
         memory -= rec.getMemory();
@@ -175,7 +173,7 @@ public class CacheLRU implements Cache {
             if (check.isChanged()) {
                 changed.add(check);
             } else {
-                remove(check.getPosInCache());
+                remove(check.getPos());
             }
         }
         if (changed.size() > 0) {
@@ -184,7 +182,7 @@ public class CacheLRU implements Cache {
             for (int i = 0; i < size; i++) {
                 CacheObject rec = changed.get(i);
                 writer.writeBack(rec);
-                remove(rec.getPosInCache());
+                remove(rec.getPos());
             }
         }
     }
