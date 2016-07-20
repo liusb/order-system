@@ -1,9 +1,14 @@
 package com.alibaba.middleware.race;
 
 import com.alibaba.middleware.race.table.Column;
+import com.alibaba.middleware.race.table.OrderTable;
+import com.alibaba.middleware.race.table.HashTable;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.TreeMap;
 
 /**
  * 订单系统的demo实现，订单数据全部存放在内存中，用简单的方式实现数据存储和查询功能
@@ -60,6 +65,7 @@ public class MyOrderSystem implements OrderSystem {
             keyOfTable(keys, orderKeys, goodKeys, buyerKeys);
         }
         // 查找订单表
+        HashTable orderTable = OrderTable.getInstance().baseTable;
 
 
       return null;
