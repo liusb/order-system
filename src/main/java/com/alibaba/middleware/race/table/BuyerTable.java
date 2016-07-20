@@ -34,7 +34,12 @@ public class BuyerTable {
 
     }
 
-    public HashMap<String, Object> find(String goodId, TreeMap<Integer, String> keys) {
+    public HashMap<String, Object> find(String buyerId, TreeMap<Integer, String> keys) {
+        HashMap<String, Object> result = new HashMap<String, Object>();
+        return result;
+    }
+
+    public HashMap<String, Object> find(String buyerId) {
         HashMap<String, Object> result = new HashMap<String, Object>();
         return result;
     }

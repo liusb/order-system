@@ -57,7 +57,7 @@ public class HashTable extends Table {
         return this.index;
     }
 
-    public ArrayList<BuyerIdRowIndex> findIndex(String buyerId, long beginTime, long endTime) {
+    public ArrayList<BuyerIdRowIndex> findIndex(String buyerId,  long startTime, long endTime) {
         int hashCode = HashIndex.getHashCode(buyerId);
         int fileIndex = index.getFileIndex(hashCode);
         int bucketIndex = index.getBucketIndex(hashCode);
@@ -82,6 +82,28 @@ public class HashTable extends Table {
         Page page = pageStore.getPage(pageId);
         Data data = page.getData();
         data.setPos(offset+4);
+        int len = data.readInt();
+
+        return null;
+    }
+
+    public HashMap<String, Object> findBuyer(String buyerId) {
+        int hashCode = HashIndex.getHashCode(buyerId);
+        int pageId = index.getBucketIndex(hashCode);
+        int fileId = index.getFileIndex(hashCode);
+        Page page = storeFiles.get(fileId).getPage(pageId);
+        Data data = page.getData();
+        int len = data.readInt();
+
+        return null;
+    }
+
+    public HashMap<String, Object> findGood(String goodId) {
+        int hashCode = HashIndex.getHashCode(goodId);
+        int pageId = index.getBucketIndex(hashCode);
+        int fileId = index.getFileIndex(hashCode);
+        Page page = storeFiles.get(fileId).getPage(pageId);
+        Data data = page.getData();
         int len = data.readInt();
 
         return null;

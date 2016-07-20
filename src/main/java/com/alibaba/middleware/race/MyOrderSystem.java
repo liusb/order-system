@@ -1,14 +1,11 @@
 package com.alibaba.middleware.race;
 
-import com.alibaba.middleware.race.table.Column;
-import com.alibaba.middleware.race.table.OrderTable;
-import com.alibaba.middleware.race.table.HashTable;
+import com.alibaba.middleware.race.index.BuyerIdRowIndex;
+import com.alibaba.middleware.race.index.OrderIdRowIndex;
+import com.alibaba.middleware.race.table.*;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.TreeMap;
+import java.util.*;
 
 /**
  * 订单系统的demo实现，订单数据全部存放在内存中，用简单的方式实现数据存储和查询功能
@@ -65,25 +62,52 @@ public class MyOrderSystem implements OrderSystem {
             keyOfTable(keys, orderKeys, goodKeys, buyerKeys);
         }
         // 查找订单表
-        HashTable orderTable = OrderTable.getInstance().baseTable;
+        OrderIdRowIndex orderIdRowIndex = OrderTable.getInstance().findOderIdIndex(orderId);
+        HashMap<String, Object> orderRecord = OrderTable.getInstance().findOrders(orderIdRowIndex);
+        String buyerId = ((String) orderRecord.get("buyerid"));
+        HashMap<String, Object> buyerRecord = BuyerTable.getInstance().find(buyerId);
+        String goodId = ((String) orderRecord.get("goodid"));
+        HashMap<String, Object> goodRecord = BuyerTable.getInstance().find(goodId);
 
-
-      return null;
+        return null;
     }
 
 
 
     public Iterator<Result> queryOrdersByBuyer(long startTime, long endTime,
       String buyerId) {
+        ArrayList<BuyerIdRowIndex> buyerIdRowIndices = OrderTable.getInstance()
+                .findBuyerIdIndex(buyerId, startTime, endTime);
+        HashMap<String, Object> buyerRecord = BuyerTable.getInstance().find(buyerId);
+        ArrayList<HashMap<String, Object>>  orderRecords = OrderTable.getInstance().findOrders(buyerIdRowIndices);
+
+        for (HashMap<String, Object> order : orderRecords) {
+            String goodId = ((String) order.get("goodid"));
+            HashMap<String, Object> goodRecord = GoodTable.getInstance().find(goodId);
+        }
+
         return null;
     }
 
     public Iterator<Result> queryOrdersBySaler(String salerId, String goodId,
       Collection<String> keys) {
+        ArrayList<HashMap<String, Object>>  orderRecords = OrderTable.getInstance().findOrders(goodId);
+        for (HashMap<String, Object> order : orderRecords) {
+            String buyerId = ((String) order.get("buyerid"));
+            HashMap<String, Object> buyerRecord = BuyerTable.getInstance().find(buyerId);
+        }
+        HashMap<String, Object> goodRecord = GoodTable.getInstance().find(goodId);
+
         return null;
     }
 
-    public KeyValue sumOrdersByGood(String goodid, String key) {
+    public KeyValue sumOrdersByGood(String goodId, String key) {
+        ArrayList<HashMap<String, Object>>  orderRecords = OrderTable.getInstance().findOrders(goodId);
+        for (HashMap<String, Object> order : orderRecords) {
+            String buyerId = ((String) order.get("buyerid"));
+            HashMap<String, Object> buyerRecord = BuyerTable.getInstance().find(buyerId);
+        }
+        HashMap<String, Object> goodRecord = GoodTable.getInstance().find(goodId);
         return null;
     }
 

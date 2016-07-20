@@ -1,9 +1,12 @@
 package com.alibaba.middleware.race.table;
 
+import com.alibaba.middleware.race.index.BuyerIdRowIndex;
 import com.alibaba.middleware.race.index.OrderIdRowIndex;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Map;
 
 public class OrderTable {
     private static OrderTable instance = new OrderTable();
@@ -61,5 +64,21 @@ public class OrderTable {
 
     public OrderIdRowIndex findOderIdIndex(long orderId) {
         return this.orderIndex.findIndex(orderId);
+    }
+
+    public HashMap<String, Object> findOrders(OrderIdRowIndex orderIdRowIndex) {
+        return null;
+    }
+
+    public ArrayList<BuyerIdRowIndex> findBuyerIdIndex(String buyerId, long startTime, long endTime) {
+        return this.buyerCreateTimeIndex.findIndex(buyerId, startTime, endTime);
+    }
+
+    public ArrayList<HashMap<String, Object>> findOrders(ArrayList<BuyerIdRowIndex> buyerIdRowIndices) {
+        return null;
+    }
+
+    public ArrayList<HashMap<String, Object>> findOrders(String goodId) {
+        return null;
     }
 }
