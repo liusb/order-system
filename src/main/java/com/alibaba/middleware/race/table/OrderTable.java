@@ -1,5 +1,7 @@
 package com.alibaba.middleware.race.table;
 
+import com.alibaba.middleware.race.index.OrderIdRowIndex;
+
 import java.util.Collection;
 import java.util.HashMap;
 
@@ -24,14 +26,14 @@ public class OrderTable {
     private static final int ORDER_INDEX_BUCKET_SIZE = 1024;
     private static final int ORDER_INDEX_CACHE_SIZE = 1024;
     private static final int ORDER_INDEX_PAGE_SIZE = 16*(1<<10);
-    // 索引为orderId 记录存储格式为[orderId, fileId, address](long, int, long)
+    // 索引为orderId 记录存储格式为[orderId, fileId, address](long, byte, long)
     public HashTable orderIndex;
 
 
     private static final int BUYER_INDEX_BUCKET_SIZE = 1024;
     private static final int BUYER_INDEX_CACHE_SIZE = 1024;
     private static final int BUYER_INDEX_PAGE_SIZE = 16*(1<<10);
-    // 索引为buyerId, 记录存储格式为[createTime, buyerId, fileId, address](long, string, int, long)
+    // 索引为buyerId, 记录存储格式为[createTime, buyerId, fileId, address](long, string, byte, long)
     public HashTable buyerCreateTimeIndex;
 
     public void init(Collection<String> storeFolders) {
@@ -40,22 +42,24 @@ public class OrderTable {
         baseTable.init(storeFolders, TABLE_BUCKET_SIZE, TABLE_CACHE_SIZE, TABLE_PAGE_SIZE);
 
         orderIndex = new HashTable("orderIndex");
-        HashMap<String, Column> orderIndexColumns = new HashMap<String, Column>();
-        orderIndexColumns.put("orderid", baseTable.getColumn("orderid"));
-        orderIndex.setHashColumnId("orderid");
-        orderIndex.setBaseColumns(orderIndexColumns);
+//        HashMap<String, Column> orderIndexColumns = new HashMap<String, Column>();
+//        orderIndexColumns.put("orderid", baseTable.getColumn("orderid"));
+//        orderIndex.setBaseColumns(orderIndexColumns);
         orderIndex.init(storeFolders, ORDER_INDEX_BUCKET_SIZE, ORDER_INDEX_CACHE_SIZE, ORDER_INDEX_PAGE_SIZE);
 
         buyerCreateTimeIndex = new HashTable("buyerCreateTimeIndex");
-        HashMap<String, Column> buyerIndexColumns = new HashMap<String, Column>();
-        orderIndexColumns.put("buyerid", baseTable.getColumn("buyerid"));
-        orderIndexColumns.put("createtime", baseTable.getColumn("createtime"));
-        buyerCreateTimeIndex.setBaseColumns(buyerIndexColumns);
-        buyerCreateTimeIndex.setHashColumnId("buyerid");
+//        HashMap<String, Column> buyerIndexColumns = new HashMap<String, Column>();
+//        orderIndexColumns.put("buyerid", baseTable.getColumn("buyerid"));
+//        orderIndexColumns.put("createtime", baseTable.getColumn("createtime"));
+//        buyerCreateTimeIndex.setBaseColumns(buyerIndexColumns);
         buyerCreateTimeIndex.init(storeFolders, BUYER_INDEX_BUCKET_SIZE, BUYER_INDEX_CACHE_SIZE, BUYER_INDEX_PAGE_SIZE);
     }
 
     public void reopen() {
 
+    }
+
+    public OrderIdRowIndex findOderIdIndex(long orderId) {
+        return this.orderIndex.findIndex(orderId);
     }
 }

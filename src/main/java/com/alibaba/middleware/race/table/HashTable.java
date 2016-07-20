@@ -1,6 +1,11 @@
 package com.alibaba.middleware.race.table;
 
+import com.alibaba.middleware.race.index.BuyerIdRowIndex;
 import com.alibaba.middleware.race.index.HashIndex;
+import com.alibaba.middleware.race.index.OrderIdRowIndex;
+import com.alibaba.middleware.race.index.RowIndex;
+import com.alibaba.middleware.race.store.Data;
+import com.alibaba.middleware.race.store.Page;
 import com.alibaba.middleware.race.store.PageStore;
 
 import java.util.ArrayList;
@@ -9,12 +14,11 @@ import java.util.HashMap;
 
 public class HashTable extends Table {
     private HashIndex index;
-    private int hashColumnId;
+    private int pageSize;
 
     public HashTable(String name) {
         this.storeFiles = new ArrayList<PageStore>();
         this.name = name;
-        this.hashColumnId = 0;
     }
 
     public void init(Collection<String> storeFolders, int bucketSize,
@@ -23,6 +27,7 @@ public class HashTable extends Table {
             PageStore pageStore = new PageStore(folder + "/" + this.name + ".db",
                     bucketSize, pageSize);
             pageStore.open("rm", cacheSize);
+            this.pageSize = pageSize;
             this.storeFiles.add(pageStore);
         }
         this.index = new HashIndex(bucketSize, this.storeFiles.size());
@@ -52,7 +57,33 @@ public class HashTable extends Table {
         return this.index;
     }
 
-    public void setHashColumnId(String key) {
-        this.hashColumnId = this.columns.get(key).getColumnId();
+    public ArrayList<BuyerIdRowIndex> findIndex(String buyerId, long beginTime, long endTime) {
+        int hashCode = HashIndex.getHashCode(buyerId);
+        int fileIndex = index.getFileIndex(hashCode);
+        int bucketIndex = index.getBucketIndex(hashCode);
+        storeFiles.get(fileIndex);
+
+        return null;
+    }
+
+    public OrderIdRowIndex findIndex(long orderId) {
+        int hashCode = HashIndex.getHashCode(orderId);
+        int fileIndex = index.getFileIndex(hashCode);
+        int bucketIndex = index.getBucketIndex(hashCode);
+        Data data = storeFiles.get(fileIndex).getPage(bucketIndex).getData();
+        int length = data.getLength();
+        return null;
+    }
+
+    public HashMap<String, Object> findOrder(RowIndex rowIndex) {
+        PageStore pageStore = this.storeFiles.get(rowIndex.getFileId());
+        int pageId = (int)(rowIndex.getAddress()/this.pageSize);
+        int offset = (int)(rowIndex.getAddress()%this.pageSize);
+        Page page = pageStore.getPage(pageId);
+        Data data = page.getData();
+        data.setPos(offset+4);
+        int len = data.readInt();
+
+        return null;
     }
 }

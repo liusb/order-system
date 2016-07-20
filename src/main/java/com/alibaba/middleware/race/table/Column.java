@@ -1,6 +1,8 @@
 package com.alibaba.middleware.race.table;
 
 public class Column {
+
+    public static final int FirstColumnsId = 0;
     private final String name;
     private final int columnId;
     private int type;
