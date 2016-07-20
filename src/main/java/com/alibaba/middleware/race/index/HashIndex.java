@@ -2,13 +2,13 @@ package com.alibaba.middleware.race.index;
 
 
 public class HashIndex {
-    private final int bucketBitSize;
+    private final int bucketSize;
     private final int bitAnd;
-    private int fileCount;
+    private final int fileCount;
 
-    public HashIndex(int bucketBitSize, int fileCount) {
-        this.bucketBitSize = bucketBitSize;
-        this.bitAnd = (1 << bucketBitSize)-1;
+    public HashIndex(int bucketSize, int fileCount) {
+        this.bucketSize = bucketSize;
+        this.bitAnd = bucketSize-1;
         this.fileCount = fileCount;
     }
 
@@ -26,7 +26,7 @@ public class HashIndex {
     }
 
     public int getFileIndex(int hashCode) {
-        return (hashCode >>> bucketBitSize)%fileCount;
+        return (hashCode/bucketSize)%fileCount;
     }
 
     public int getBucketIndex(int hashCode) {
