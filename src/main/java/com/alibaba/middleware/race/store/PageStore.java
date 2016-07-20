@@ -4,7 +4,6 @@ import com.alibaba.middleware.race.cache.Cache;
 import com.alibaba.middleware.race.cache.CacheLRU;
 import com.alibaba.middleware.race.cache.CacheObject;
 import com.alibaba.middleware.race.cache.CacheWriter;
-import com.alibaba.middleware.race.utils.Constants;
 
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -33,7 +32,7 @@ public class PageStore implements CacheWriter {
         this.mode = mode;
         try {
             this.file = new FileStore(fileName, mode);
-            this.cache = new CacheLRU(this, cacheSize);
+            this.cache = new CacheLRU(this, cacheSize, pageSize);
             if (mode.equals("rw")) {
                 this.file.setLength(bucketSize*pageSize);
             }
@@ -49,7 +48,6 @@ public class PageStore implements CacheWriter {
                 this.writeAllChanged();
             }
             this.file.close();
-            this.cache.clear();
             this.file = null;
             this.cache = null;
         }catch (Exception e) {
@@ -58,76 +56,70 @@ public class PageStore implements CacheWriter {
         }
     }
 
-    public synchronized Page getPage(int pageId) {
-        Page p = (Page) cache.get(pageId);
+    public synchronized HashDataPage getPage(int pageId) {
+        HashDataPage p = (HashDataPage) cache.get(pageId);
         if (p != null) {
             return p;
         }
         Data data = new Data(new byte[pageSize]);
-        //readPage(pageId, data);
-        byte type = data.readByte();
-        data.readInt();
-        switch (type) {
-            case Page.TYPE_DATA_HASH:
-                p = HashDataPage.read(data, pageId);
-                break;
-            default:
-                System.err.println("ERROR: page=" + pageId + ", type not support :" + type);
-        }
+        readPageData(data, pageId);
+        p = new HashDataPage(data, pageId);
+        p.readHeader();
         cache.put(p);
         return p;
     }
 
-    void readPage(int pos, Data page) {
-        file.seek((long) pos << 4);
+    void readPageData(Data page, int pageId) {
+        file.seek(((long) pageId) * pageSize);
         file.read(page.getBytes(), 0, pageSize);
     }
 
-    private Page allocateNewPage(Data data, int pageId) {
-        HashDataPage page = new HashDataPage(data, pageId);
-        page.writeDefaultHeader();
-        page.setChanged(true);
-        page.setPosInCache(pageId);
-        usedSet.set(pageId);
-        return page;
-    }
-
-    public Page allocateBucketPage(int pageId) {
-        HashDataPage page;
+    // 分配第一个桶
+    private HashDataPage allocateBucket(int pageId) {
         Data data = new Data(new byte[pageSize]);
-        if (usedSet.get(pageId)) {  // 已经分配过， 说明页溢出
-            long oldLength = file.getLength();
-            file.setLength(oldLength + Constants.PAGE_SIZE);
-            page = new HashDataPage(data, (int)(oldLength/Constants.PAGE_SIZE));
-            page.setPosInCache(pageId);
-            // 修改旧页的下一页表项, 将改页写入文件
-            Page oldPage = (Page)cache.get(pageId);
-            cache.remove(pageId);
-            oldPage.getData().setInt(HashDataPage.NextPos, page.getPageId());
-            this.writeBack(oldPage);
-            page.getData().setInt(HashDataPage.PreviousPos, oldPage.getPageId());
-            page.getData().setInt(HashDataPage.NextPos, -1);
-        } else {  // 未分配，分配新页
-            page = (HashDataPage)allocateNewPage(data, pageId);
-        }
+        HashDataPage page = new HashDataPage(data, pageId);
+        page.setChanged(true);
+        page.setPos(pageId);
+        usedSet.set(pageId);
         cache.put(page);
         return page;
     }
 
+    // 获取桶中首个可以写入数据的页
+    private HashDataPage getBucket(int pageId) {
+        HashDataPage page = (HashDataPage)cache.get(pageId);
+        if (page != null) {
+            if (page.dataIsFree()) {
+                page = getBucket(page.getNextPage());
+            }
+        } else {
+            page = allocateBucket(pageId);
+        }
+        return page;
+    }
+
+    // 向桶中添加页
+    private HashDataPage expandBucket(HashDataPage oldPage) {
+        int oldPageId = oldPage.getPageId();
+        long oldLength = file.getLength();
+        file.setLength(oldLength + pageSize);
+        int newPageId = (int) (oldLength / pageSize);
+        HashDataPage newPage = new HashDataPage(oldPage.data, newPageId);
+        // 修改旧页的下一页表项, 将改页写入文件
+        oldPage.setNextPage(newPageId);
+        this.writeBack(oldPage);
+        oldPage.freeData();
+        newPage.setPreviousPage(oldPageId);
+        return newPage;
+    }
+
     public long insertData(int pageId, Data buffer) {
         long address = 0;
-        Page page = (Page)cache.get(pageId);
-        if (page == null) {
-            if (usedSet.get(pageId)) {  // 已经分配过但被置换出
-                throw new RuntimeException("TODO: 现在还不支持置换: " + pageId);
-            } else {
-                page = allocateBucketPage(pageId);
-            }
-        }
+        HashDataPage page = getBucket(pageId);
         Data data = page.getData();
-        if (data.getLength() - data.getPos() > 8) {  // 剩余空间太小，不足写入hashCode和length
+        if (data.getLength() - data.getPos() < 8) {  // 剩余空间太小，不足写入hashCode和length
             // 分配新页， 写入旧页
-            page = allocateBucketPage(pageId);
+            page = expandBucket(page);
             data = page.getData();
         }
         int bufferPos = 0;
@@ -137,7 +129,7 @@ public class PageStore implements CacheWriter {
                 // 写入数据
                 System.arraycopy(buffer.getBytes(), bufferPos, data.getBytes(), data.getPos(), leftLength);
                 bufferPos = buffer.getPos() - leftLength;
-                page = allocateBucketPage(pageId);
+                page = expandBucket(page);
                 data = page.getData();
             } else {
                 System.arraycopy(buffer.getBytes(), bufferPos, data.getBytes(), data.getPos(), buffer.getPos()-bufferPos);
@@ -145,6 +137,17 @@ public class PageStore implements CacheWriter {
             }
         }
         return address;
+    }
+
+    public void insertIndexData(int pageId, Data buffer) {
+        // 判断是否能够写入该页， 不能写入直接写到下一页
+        HashDataPage page = getBucket(pageId);
+        Data data = page.getData();
+        if (data.getLength() - data.getPos() < buffer.getPos()) {
+            page = expandBucket(page);
+            data = page.getData();
+        }
+        System.arraycopy(buffer.getBytes(), 0, data.getBytes(), data.getPos(), buffer.getPos());
     }
 
     public void writeAllChanged() {
@@ -165,7 +168,8 @@ public class PageStore implements CacheWriter {
         Data data = page.getData();
         int dataLen = data.getPos();
         page.setDataLen(dataLen);
-        file.seek(page.getPosInFile());
+        page.writeHeader();
+        file.seek(((long)page.getPos())*pageSize);
         file.write(data.getBytes(), 0, dataLen);
         page.setChanged(false);
     }

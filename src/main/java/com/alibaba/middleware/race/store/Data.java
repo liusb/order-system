@@ -28,6 +28,10 @@ public class Data {
         return pos;
     }
 
+    public void setPos(int pos) {
+        this.pos = pos;
+    }
+
     // 跳过len个byte长度
     public void skip(int len) {
         pos = pos + len;
