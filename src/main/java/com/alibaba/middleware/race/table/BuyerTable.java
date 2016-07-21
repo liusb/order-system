@@ -40,7 +40,6 @@ public class BuyerTable {
     }
 
     public HashMap<String, Object> find(String buyerId) {
-        HashMap<String, Object> result = new HashMap<String, Object>();
-        return result;
+        return this.baseTable.findRecord(buyerId);
     }
 }

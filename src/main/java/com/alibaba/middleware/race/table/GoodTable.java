@@ -43,9 +43,6 @@ public class GoodTable {
     }
 
     public HashMap<String, Object> find(String goodId) {
-        HashMap<String, Object> result = new HashMap<String, Object>();
-        int hashCode = HashIndex.getHashCode(goodId);
-        int fileId = baseTable.getIndex().getFileIndex(hashCode);
-        return result;
+        return baseTable.findRecord(goodId);
     }
 }
