@@ -42,6 +42,10 @@ public class WorkerManager {
         processGoodRecord();
         processBuyerRecord();
         processOrderRecord();
+
+        OrderTable.getInstance().reopen();
+        BuyerTable.getInstance().reopen();
+        GoodTable.getInstance().reopen();
     }
 
     private void processGoodRecord() {
