@@ -1,7 +1,7 @@
 package com.alibaba.middleware.race.store.fs;
 
-import com.alibaba.middleware.race.Field;
-import com.alibaba.middleware.race.Record;
+import com.alibaba.middleware.race.demo.Field;
+import com.alibaba.middleware.race.demo.Record;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;

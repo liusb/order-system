@@ -15,7 +15,7 @@ public class HashDataPage extends Page {
         this.dataLen = HeaderLength;
         this.previousPage = -1;
         this.nextPage = -1;
-        this.data.reset();
+        this.data.setPos(HeaderLength);
         this.setPos(pageId);
     }
 
@@ -26,9 +26,12 @@ public class HashDataPage extends Page {
     }
 
     public void readHeader() {
+        int pos = this.data.getPos();
+        this.data.reset();
         dataLen = this.data.readInt();
         previousPage = this.data.readInt();
         nextPage = this.data.readInt();
+        this.setPos(pos);
     }
 
     public void setPreviousPage(int previousPage) {

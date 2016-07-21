@@ -76,6 +76,9 @@ public class PageStore implements CacheWriter {
 
     // 分配第一个桶
     private HashDataPage allocateBucket(int pageId) {
+        if (usedSet.get(pageId)) {
+            throw new RuntimeException("重复分配了页面，可能缓存被替换了。pageId: "+pageId);
+        }
         Data data = new Data(new byte[pageSize]);
         HashDataPage page = new HashDataPage(data, pageId);
         page.setChanged(true);
@@ -89,8 +92,9 @@ public class PageStore implements CacheWriter {
     private HashDataPage getBucket(int pageId) {
         HashDataPage page = (HashDataPage)cache.get(pageId);
         if (page != null) {
-            if (page.dataIsFree()) {
-                page = getBucket(page.getNextPage());
+            while (page.dataIsFree()) {
+                // todo 此次应该优化成只有一次的链接
+                page = (HashDataPage)cache.get(page.getNextPage());
             }
         } else {
             page = allocateBucket(pageId);
@@ -101,20 +105,20 @@ public class PageStore implements CacheWriter {
     // 向桶中添加页
     private HashDataPage expandBucket(HashDataPage oldPage) {
         int oldPageId = oldPage.getPageId();
+        Data oldData = oldPage.getData();
         long oldLength = file.getLength();
         file.setLength(oldLength + pageSize);
         int newPageId = (int) (oldLength / pageSize);
-        HashDataPage newPage = new HashDataPage(oldPage.data, newPageId);
         // 修改旧页的下一页表项, 将改页写入文件
         oldPage.setNextPage(newPageId);
         this.writeBack(oldPage);
         oldPage.freeData();
+        HashDataPage newPage = new HashDataPage(oldData, newPageId);
         newPage.setPreviousPage(oldPageId);
         return newPage;
     }
 
     public long insertData(int pageId, Data buffer) {
-        long address = 0;
         HashDataPage page = getBucket(pageId);
         Data data = page.getData();
         if (data.getLength() - data.getPos() < 8) {  // 剩余空间太小，不足写入hashCode和length
@@ -122,6 +126,7 @@ public class PageStore implements CacheWriter {
             page = expandBucket(page);
             data = page.getData();
         }
+        long address = ((long)pageId*pageSize + data.getPos());  // 返回记录写入的地址
         int bufferPos = 0;
         while (bufferPos < buffer.getPos()) {
             int leftLength = data.getLength() - data.getPos();
