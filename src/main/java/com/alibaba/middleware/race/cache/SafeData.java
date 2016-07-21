@@ -11,4 +11,8 @@ public class SafeData {
         }
     };
 
+    public static Data getData() {
+        return data.get();
+    }
+
 }
