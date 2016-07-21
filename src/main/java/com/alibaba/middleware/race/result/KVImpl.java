@@ -7,6 +7,11 @@ public class KVImpl implements OrderSystem.KeyValue {
     private String key;
     private Object value;
 
+    public KVImpl(String key, Object value) {
+        this.key = key;
+        this.value = value;
+    }
+
     @Override
     public String key() {
         return key;
