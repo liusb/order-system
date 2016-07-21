@@ -13,17 +13,20 @@ public class TestMain {
         // init order system
         List<String> orderFiles = new ArrayList<String>();
         List<String> buyerFiles = new ArrayList<String>();
-        ;
         List<String> goodFiles = new ArrayList<String>();
         List<String> storeFolders = new ArrayList<String>();
 
-        orderFiles.add("order_records.txt");
-        buyerFiles.add("buyer_records.txt");
-        goodFiles.add("good_records.txt");
-        storeFolders.add("./");
+        orderFiles.add("./order_records.txt");
+        buyerFiles.add("./buyer_records.txt");
+        goodFiles.add("./good_records.txt");
+        storeFolders.add("./1");
+        storeFolders.add("./2");
+        storeFolders.add("./3");
 
-        OrderSystem os = new OrderSystemImpl();
+        OrderSystem os = new MyOrderSystem();
+        long beginTime = System.currentTimeMillis();
         os.construct(orderFiles, buyerFiles, goodFiles, storeFolders);
+        System.out.println("============>" + (System.currentTimeMillis() - beginTime));
 
         // 用例
         long orderid = 2982388;

@@ -31,7 +31,7 @@ public class HashTable extends Table {
         for (String folder: storeFolders) {
             PageStore pageStore = new PageStore(folder + "/" + this.name + ".db",
                     bucketSize, pageSize);
-            pageStore.open("rm", cacheSize);
+            pageStore.open("rw", cacheSize);
             this.pageSize = pageSize;
             this.storeFiles.add(pageStore);
         }
