@@ -67,9 +67,9 @@ public class HashTable extends Table {
     }
 
     public ArrayList<BuyerIdRowIndex> findIndex(String buyerId,  long startTime, long endTime) {
-        ArrayList<BuyerIdRowIndex>  results = new ArrayList<BuyerIdRowIndex>();
+        ArrayList<BuyerIdRowIndex> results = new ArrayList<BuyerIdRowIndex>();
         int hashCode = HashIndex.getHashCode(buyerId);
-        int fileIndex = index.getFileIndex(hashCode);
+        PageStore pageStore = storeFiles.get(index.getFileIndex(hashCode));
         int bucketIndex = index.getBucketIndex(hashCode);
         int readHashCode;
         String readString;
@@ -77,16 +77,14 @@ public class HashTable extends Table {
         HashDataPage page;
         Data data;
         while (true) {
-            page = storeFiles.get(fileIndex).getPage(bucketIndex);
-            page.readHeader();
+            page = pageStore.getPage(bucketIndex);
             data = new Data(page.getData().getBytes());
             data.setPos(HashDataPage.HeaderLength);
             // [hashCode(int), buyerId(len,string), createTime(long), fileId(byte), address(long)]
-            while (page.getPos() < page.getDataLen()) {
+            while (data.getPos() < page.getDataLen()) {
                 readHashCode = data.readInt();
                 if (readHashCode != hashCode) {
-                    int skipLen = data.readInt() + 8 + 1 + 8;
-                    data.skip(skipLen);
+                    data.skip(data.readInt() + 8 + 1 + 8);
                 } else {
                     readString = data.readString();
                     if (readString.equals(buyerId)) {
@@ -114,18 +112,17 @@ public class HashTable extends Table {
 
     public OrderIdRowIndex findIndex(long orderId) {
         int hashCode = HashIndex.getHashCode(orderId);
-        int fileIndex = index.getFileIndex(hashCode);
+        PageStore pageStore = storeFiles.get(index.getFileIndex(hashCode));
         int bucketIndex = index.getBucketIndex(hashCode);
         HashDataPage page;
         Data data;
         long readOrderId;
         while (true) {
-            page = storeFiles.get(fileIndex).getPage(bucketIndex);
-            page.readHeader();
+            page = pageStore.getPage(bucketIndex);
             data = new Data(page.getData().getBytes());
             data.setPos(HashDataPage.HeaderLength);
             // [orderId(long), fileId(byte), address(long)]
-            while (page.getPos() < page.getDataLen()) {
+            while (data.getPos() < page.getDataLen()) {
                 readOrderId = data.readLong();
                 if (readOrderId != orderId) {
                     data.skip(1+8);
