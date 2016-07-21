@@ -13,6 +13,7 @@ public class OrderIdRowIndex extends RowIndex {
     @Override
     public void writeToBuffer(Data buffer) {
         buffer.reset();
+        // [orderId(long), fileId(byte), address(long)]
         buffer.writeLong(this.orderId);
         buffer.writeByte(this.getFileId());
         buffer.writeLong(this.getAddress());

@@ -14,6 +14,7 @@ public class BuyerIdRowIndex extends RowIndex {
     @Override
     public void writeToBuffer(Data buffer) {
         buffer.reset();
+        // [hashCode(int), buyerId(len,string), createTime(long), fileId(byte), address(long)]
         buffer.writeInt(this.getHashCode());
         buffer.writeString(this.buyerId);
         buffer.writeLong(this.createTime);
