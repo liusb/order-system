@@ -31,7 +31,7 @@ public class HashDataPage extends Page {
         dataLen = this.data.readInt();
         previousPage = this.data.readInt();
         nextPage = this.data.readInt();
-        this.setPos(pos);
+        this.data.setPos(pos);
     }
 
     public void setPreviousPage(int previousPage) {
