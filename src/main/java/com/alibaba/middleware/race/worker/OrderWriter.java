@@ -34,7 +34,8 @@ public class OrderWriter implements Runnable {
 
     public OrderWriter(LinkedBlockingQueue<Row> in, PageStore pageFile, byte fileId, HashIndex index,
                        HashIndex orderIndexIndex, ArrayList<LinkedBlockingQueue<OrderIdRowIndex>> orderIndexOut,
-                       HashIndex buyerIndexIndex, ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexOut) {
+                       HashIndex buyerIndexIndex, ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexOut,
+                       int orderColumnId, int buyerIdColumnId, int buyerCreateTimeColumnId) {
         this.in = in;
         this.pageFile = pageFile;
         this.index = index;
@@ -46,6 +47,9 @@ public class OrderWriter implements Runnable {
         this.buyerIndexOut = buyerIndexOut;
         this.buffer = new Data(new byte[Constants.PAGE_SIZE]);
         this.row = null;
+        this.orderColumnId = orderColumnId;
+        this.buyerIdColumnId = buyerIdColumnId;
+        this.buyerCreateTimeColumnId = buyerCreateTimeColumnId;
         this.inCount = 0;
         this.threadId = 0;
     }
@@ -75,7 +79,7 @@ public class OrderWriter implements Runnable {
         }
     }
 
-    private void outputOrderIndex(long address) {
+    private void outputOrderIndex() {
         OrderIdRowIndex orderIdRowIndex = new OrderIdRowIndex(this.fileId, this.address);
         long orderId = ((Long) row.getValue(orderColumnId));
         int hashCode = HashIndex.getHashCode(row.getValue(orderColumnId));
@@ -97,7 +101,7 @@ public class OrderWriter implements Runnable {
     @Override
     public void run() {
         this.threadId = Thread.currentThread().getId();
-        System.out.println("INFO: Writer thread is running. Thread id:" + threadId);
+//        System.out.println("INFO: Writer thread is running. Thread id:" + threadId);
         while (true) {
             this.nextRow();
             if(row.isEmpty()) {
@@ -105,16 +109,16 @@ public class OrderWriter implements Runnable {
             }
             row.writeToBytes(buffer);
             int PageId = index.getBucketIndex(row.getHashCode());
-            long address = pageFile.insertData(PageId, buffer);
+            this.address = pageFile.insertData(PageId, buffer);
             // 输出索引
-            this.outputOrderIndex(address);
+            this.outputOrderIndex();
             this.outputBuyerIndex();
             inCount++;
-            if(inCount % 30 == 0) {
-                System.out.println("INFO: Writer count is:" + inCount + ". Thread id:" + threadId);
-            }
+//            if(inCount % 30 == 0) {
+//                System.out.println("INFO: Writer count is:" + inCount + ". Thread id:" + threadId);
+//            }
         }
         this.pageFile.close();
-        System.out.println("INFO: Writer thread completed. Thread id:" + threadId);
+        System.out.println("INFO: Writer thread completed. inCount:" + inCount + " Thread id:" + threadId);
     }
 }

@@ -1,4 +1,4 @@
-package com.alibaba.middleware.race;
+package com.alibaba.middleware.race.demo;
 
 import java.util.HashMap;
 

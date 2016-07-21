@@ -1,4 +1,6 @@
-package com.alibaba.middleware.race;
+package com.alibaba.middleware.race.demo;
+
+import com.alibaba.middleware.race.OrderSystem;
 
 import java.util.Set;
 

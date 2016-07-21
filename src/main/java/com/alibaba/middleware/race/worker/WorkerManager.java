@@ -12,6 +12,10 @@ import java.util.Collection;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class WorkerManager {
+
+    private final int PARSER_THREAD_NUM = 4;
+    private final int QUEUE_SIZE = 32;
+
     private Collection<String> storeFolders;
     private Collection<String> orderFiles;
     private Collection<String> buyerFiles;
@@ -51,12 +55,11 @@ public class WorkerManager {
     private void processGoodRecord() {
         GoodTable table = GoodTable.getInstance();
         table.init(this.storeFolders);
-        HashIndex index = table.baseTable.getIndex();
-        ArrayList<LinkedBlockingQueue<String>> inQueues = createQueues(4, 16);
-        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(this.storeFolders.size(), 16);
+        ArrayList<LinkedBlockingQueue<String>> inQueues = createQueues(PARSER_THREAD_NUM, QUEUE_SIZE);
+        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(this.storeFolders.size(), QUEUE_SIZE);
         ArrayList<Reader> readers = createReaders(goodFiles, inQueues);
-        ArrayList<Parser> parsers = createParser(inQueues, outQueues, table.baseTable, index);
-        ArrayList<Writer> writers = createWriter(outQueues, table.baseTable.getPageFiles(), index);
+        ArrayList<Parser> parsers = createParser(inQueues, outQueues, table.baseTable);
+        ArrayList<Writer> writers = createWriter(outQueues, table.baseTable);
         ArrayList<Thread> readerThreads = new ArrayList<Thread>();
         for (Reader reader: readers) {
             readerThreads.add(new Thread(reader));
@@ -84,12 +87,11 @@ public class WorkerManager {
     private void processBuyerRecord() {
         BuyerTable table = BuyerTable.getInstance();
         table.init(this.storeFolders);
-        HashIndex index = table.baseTable.getIndex();
-        ArrayList<LinkedBlockingQueue<String>> inQueues = createQueues(4, 16);
-        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(this.storeFolders.size(), 16);
+        ArrayList<LinkedBlockingQueue<String>> inQueues = createQueues(PARSER_THREAD_NUM, QUEUE_SIZE);
+        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(this.storeFolders.size(), QUEUE_SIZE);
         ArrayList<Reader> readers = createReaders(buyerFiles, inQueues);
-        ArrayList<Parser> parsers = createParser(inQueues, outQueues, table.baseTable, index);
-        ArrayList<Writer> writers = createWriter(outQueues, table.baseTable.getPageFiles(), index);
+        ArrayList<Parser> parsers = createParser(inQueues, outQueues, table.baseTable);
+        ArrayList<Writer> writers = createWriter(outQueues, table.baseTable);
         ArrayList<Thread> readerThreads = new ArrayList<Thread>();
         for (Reader reader: readers) {
             readerThreads.add(new Thread(reader));
@@ -120,14 +122,16 @@ public class WorkerManager {
         HashIndex baseIndex = table.baseTable.getIndex();
         HashIndex orderIndexIndex = table.orderIndex.getIndex();
         HashIndex buyerIndexIndex = table.buyerCreateTimeIndex.getIndex();
-        ArrayList<LinkedBlockingQueue<String>> inQueues = createQueues(4, 16);
-        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(4, 16);
-        ArrayList<LinkedBlockingQueue<OrderIdRowIndex>> orderIndexQueues = createQueues(3, 32);
-        ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexQueues = createQueues(3, 32);
+        ArrayList<LinkedBlockingQueue<String>> inQueues = createQueues(PARSER_THREAD_NUM, QUEUE_SIZE);
+        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(table.baseTable.getPageFiles().size(), QUEUE_SIZE);
+        ArrayList<LinkedBlockingQueue<OrderIdRowIndex>> orderIndexQueues
+                = createQueues(table.orderIndex.getPageFiles().size(), QUEUE_SIZE);
+        ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexQueues
+                = createQueues(table.buyerCreateTimeIndex.getPageFiles().size(), QUEUE_SIZE);
         ArrayList<Reader> readers = createReaders(orderFiles, inQueues);
-        ArrayList<Parser> parsers = createParser(inQueues, outQueues, table.baseTable, baseIndex);
-        ArrayList<OrderWriter> orderWriters = createOrderWriter(outQueues, table.baseTable.getPageFiles(),
-                baseIndex, orderIndexIndex, orderIndexQueues, buyerIndexIndex, buyerIndexQueues);
+        ArrayList<Parser> parsers = createParser(inQueues, outQueues, table.baseTable);
+        ArrayList<OrderWriter> orderWriters = createOrderWriter(outQueues, table.baseTable,
+                orderIndexIndex, orderIndexQueues, buyerIndexIndex, buyerIndexQueues);
         ArrayList<IndexWriter<OrderIdRowIndex>> orderIndexWriters = createIndexWriter(orderIndexQueues,
                 table.orderIndex.getPageFiles(), baseIndex);
         ArrayList<IndexWriter<BuyerIdRowIndex>> buyerIndexWriters = createIndexWriter(buyerIndexQueues,
@@ -172,29 +176,6 @@ public class WorkerManager {
         sendEndMsg(buyerIndexQueues, emptyBuyerIdRowIndex);
         waitThreads(buyerIndexWriterThreads);
 
-    }
-
-    public static void main(String[] args) {
-        WorkerManager manager = new WorkerManager();
-        ArrayList<String> storeFolders = new ArrayList<String>();
-        storeFolders.add("./1");
-        storeFolders.add("./2");
-        storeFolders.add("./3");
-        manager.setStoreFolders(storeFolders);
-
-        ArrayList<String> buyerFiles = new ArrayList<String>();
-        buyerFiles.add("./buyer_records.txt");
-        manager.setBuyerFiles(buyerFiles);
-
-        ArrayList<String> goodFiles = new ArrayList<String>();
-        goodFiles.add("./good_records.txt");
-        manager.setGoodFiles(goodFiles);
-
-        ArrayList<String> orderFiles = new ArrayList<String>();
-        orderFiles.add("./order_records.txt");
-        manager.setOrderFiles(orderFiles);
-
-        manager.run();
     }
 
     private void startThreads(ArrayList<Thread> workers) {
@@ -245,31 +226,35 @@ public class WorkerManager {
 
     private static ArrayList<Parser> createParser(ArrayList<LinkedBlockingQueue<String>> inQueues,
                                                   ArrayList<LinkedBlockingQueue<Row>> outQueues,
-                                                  HashTable table,HashIndex index) {
+                                                  HashTable table) {
         ArrayList<Parser> parsers = new ArrayList<Parser>();
         for (LinkedBlockingQueue<String> queue: inQueues) {
-            parsers.add(new Parser(queue, outQueues, table, index));
+            parsers.add(new Parser(queue, outQueues, table, table.getIndex()));
         }
         return parsers;
     }
 
     private static ArrayList<Writer> createWriter(ArrayList<LinkedBlockingQueue<Row>> outQueues,
-                                                  ArrayList<PageStore> pageFiles, HashIndex index) {
+                                                  HashTable table) {
         ArrayList<Writer> writers = new ArrayList<Writer>();
         for (int i=0; i< outQueues.size(); i++) {
-            writers.add(new Writer(outQueues.get(i), pageFiles.get(i), index));
+            writers.add(new Writer(outQueues.get(i), table.getPageFiles().get(i), table.getIndex()));
         }
         return writers;
     }
 
     private static ArrayList<OrderWriter> createOrderWriter(
-            ArrayList<LinkedBlockingQueue<Row>> outQueues, ArrayList<PageStore> pageFiles, HashIndex index,
+            ArrayList<LinkedBlockingQueue<Row>> outQueues, HashTable table,
             HashIndex orderIndexIndex, ArrayList<LinkedBlockingQueue<OrderIdRowIndex>> orderIndexOut,
             HashIndex buyerIndexIndex, ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexOut) {
         ArrayList<OrderWriter> writers = new ArrayList<OrderWriter>();
+        int orderColumnId = table.getColumn("orderid").getColumnId();
+        int buyerIdColumnId = table.getColumn("buyerid").getColumnId();
+        int buyerCreateTimeColumnId = table.getColumn("createtime").getColumnId();
         for (int i=0; i< outQueues.size(); i++) {
-            writers.add(new OrderWriter(outQueues.get(i), pageFiles.get(i), (byte)i, index,
-                    orderIndexIndex, orderIndexOut, buyerIndexIndex, buyerIndexOut));
+            writers.add(new OrderWriter(outQueues.get(i), table.getPageFiles().get(i), (byte)i, table.getIndex(),
+                    orderIndexIndex, orderIndexOut, buyerIndexIndex, buyerIndexOut,
+                    orderColumnId, buyerIdColumnId, buyerCreateTimeColumnId));
         }
         return writers;
     }

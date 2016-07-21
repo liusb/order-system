@@ -45,7 +45,7 @@ public class Writer implements Runnable {
     @Override
     public void run() {
         this.threadId = Thread.currentThread().getId();
-        System.out.println("INFO: Writer thread is running. Thread id:" + threadId);
+//        System.out.println("INFO: Writer thread is running. Thread id:" + threadId);
         while (true) {
             this.nextRow();
             if(row.isEmpty()) {
@@ -55,11 +55,11 @@ public class Writer implements Runnable {
             int PageId = index.getBucketIndex(row.getHashCode());
             pageFile.insertData(PageId, buffer);
             inCount++;
-            if(inCount % 30 == 0) {
-                System.out.println("INFO: Writer count is:" + inCount + ". Thread id:" + threadId);
-            }
+//            if(inCount % 30 == 0) {
+//                System.out.println("INFO: Writer count is:" + inCount + ". Thread id:" + threadId);
+//            }
         }
         this.pageFile.close();
-        System.out.println("INFO: Writer thread completed. Thread id:" + threadId);
+        System.out.println("INFO: Writer thread completed. inCount:" + inCount + " Thread id:" + threadId);
     }
 }

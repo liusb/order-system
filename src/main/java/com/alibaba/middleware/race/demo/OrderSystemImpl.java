@@ -1,5 +1,6 @@
-package com.alibaba.middleware.race;
+package com.alibaba.middleware.race.demo;
 
+import com.alibaba.middleware.race.OrderSystem;
 import com.alibaba.middleware.race.store.fs.RawFileHandler;
 
 import java.io.IOException;

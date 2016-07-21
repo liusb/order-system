@@ -71,7 +71,7 @@ public class Parser implements Runnable {
     @Override
     public void run() {
         this.threadId = Thread.currentThread().getId();
-        System.out.println("INFO: Parser thread is running. Thread id:" + threadId);
+//        System.out.println("INFO: Parser thread is running. Thread id:" + threadId);
         while (true) {
             this.nextLine();
             if(line.isEmpty()) {
@@ -87,10 +87,10 @@ public class Parser implements Runnable {
                 }
             }
             rowCount ++;
-            if(rowCount % 30 == 0) {
-                System.out.println("INFO: Parser count is:" + rowCount + ". Thread id:" + threadId);
-            }
+//            if(rowCount % 30 == 0) {
+//                System.out.println("INFO: Parser count is:" + rowCount + ". Thread id:" + threadId);
+//            }
         }
-        System.out.println("INFO: Parser thread completed. Thread id:" + threadId);
+        System.out.println("INFO: Parser thread completed. rowCount:" + rowCount + " Thread id:" + threadId);
     }
 }

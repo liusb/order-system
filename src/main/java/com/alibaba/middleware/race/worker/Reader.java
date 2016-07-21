@@ -20,7 +20,7 @@ public class Reader implements Runnable {
     @Override
     public void run() {
         this.threadId = Thread.currentThread().getId();
-        System.out.println("INFO: Reader thread is running. Thread id:" + threadId);
+//        System.out.println("INFO: Reader thread is running. Thread id:" + threadId);
         String line = in.nextLine();
         while (line != null) {
             while (true) {
@@ -33,11 +33,11 @@ public class Reader implements Runnable {
             }
             line = in.nextLine();
             lineCount++;
-            if(lineCount % 30 == 0) {
-                System.out.println("INFO: Reader count is:" + lineCount  + ". Thread id:" + threadId);
-            }
+//            if(lineCount % 30 == 0) {
+//                System.out.println("INFO: Reader count is:" + lineCount  + ". Thread id:" + threadId);
+//            }
         }
-        System.out.println("INFO: Reader thread completed. Thread id:" + threadId);
+        System.out.println("INFO: Reader thread completed. lineCount:" + lineCount + " Thread id:" + threadId);
         in.close();
     }
 }
