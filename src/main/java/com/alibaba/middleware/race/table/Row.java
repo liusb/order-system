@@ -58,6 +58,7 @@ public class Row {
     public int writeToBytes(Data buffer) {
         Object value;
         buffer.reset();
+        buffer.writeInt(hashCode);
         buffer.skip(4);
         for (Map.Entry<Integer, Object> entry: values.entrySet()) {
             buffer.writeInt(entry.getKey());

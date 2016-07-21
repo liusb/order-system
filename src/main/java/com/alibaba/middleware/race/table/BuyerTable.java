@@ -31,7 +31,7 @@ public class BuyerTable {
 
     // 在构造完，准备查询前重新打开，以只读方式打开，缓存为只读，
     public void reopen() {
-
+        this.baseTable.reopen(1024);
     }
 
     public HashMap<String, Object> find(String buyerId, TreeMap<Integer, String> keys) {
