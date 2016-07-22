@@ -92,7 +92,7 @@ public class PageStore implements CacheWriter {
     private HashDataPage getBucket(int pageId) {
         HashDataPage page = (HashDataPage)cache.get(pageId);
         if (page != null) {
-            while (page.dataIsFree()) {
+            while (page.dataIsFree()) {  // todo 会产生空指针错误
                 // todo 此次应该优化成只有一次的链接
                 page = (HashDataPage)cache.get(page.getNextPage());
             }
@@ -127,18 +127,18 @@ public class PageStore implements CacheWriter {
             data = page.getData();
         }
         long address = ((long)pageId*pageSize + data.getPos());  // 返回记录写入的地址
-        int bufferPos = 0;
-        while (bufferPos < buffer.getPos()) {
-            int leftLength = data.getLength() - data.getPos();
-            if (leftLength < buffer.getPos() - bufferPos) {  // 写不下全部，写入一部分
+        int copyPos = 0;
+        while (true) {
+            int emptyLength = data.getLength() - data.getPos();
+            if (emptyLength < buffer.getPos() - copyPos) {  // 写不下全部，写入一部分
                 // 写入数据
-                System.arraycopy(buffer.getBytes(), bufferPos, data.getBytes(), data.getPos(), leftLength);
-                bufferPos = buffer.getPos() - leftLength;
+                data.copyFrom(buffer, copyPos, emptyLength);
+                copyPos = buffer.getPos() - emptyLength;
                 page = expandBucket(page);
                 data = page.getData();
             } else {
-                System.arraycopy(buffer.getBytes(), bufferPos, data.getBytes(), data.getPos(), buffer.getPos()-bufferPos);
-                bufferPos = buffer.getPos();
+                data.copyFrom(buffer, copyPos, buffer.getPos()-copyPos);
+                break;
             }
         }
         return address;

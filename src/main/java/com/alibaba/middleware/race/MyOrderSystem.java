@@ -78,10 +78,28 @@ public class MyOrderSystem implements OrderSystem {
             return null;
         }
         HashMap<String, Object> orderRecord = OrderTable.getInstance().findOrders(orderIdRowIndex);
+//        if (orderRecord.isEmpty()) {
+//            throw new RuntimeException("找到了索引找不到记录");
+//        }
+//        for (Map.Entry<String, Object> kv : orderRecord.entrySet()) {
+//            System.out.println(kv.toString().replace("=", ":"));
+//        }
         String buyerId = ((String) orderRecord.get("buyerid"));
         HashMap<String, Object> buyerRecord = BuyerTable.getInstance().find(buyerId);
+//        if (buyerRecord.isEmpty()) {
+//            throw new RuntimeException("找不到买家记录");
+//        }
+//        for (Map.Entry<String, Object> kv : buyerRecord.entrySet()) {
+//            System.out.println(kv.toString().replace("=", ":"));
+//        }
         String goodId = ((String) orderRecord.get("goodid"));
-        HashMap<String, Object> goodRecord = BuyerTable.getInstance().find(goodId);
+        HashMap<String, Object> goodRecord = GoodTable.getInstance().find(goodId);
+//        if (goodRecord.isEmpty()) {
+//            throw new RuntimeException("找不到商品记录");
+//        }
+//        for (Map.Entry<String, Object> kv : goodRecord.entrySet()) {
+//            System.out.println(kv.toString().replace("=", ":"));
+//        }
         HashMap<String, KVImpl> result;
         if (keys == null) {
             result = joinResult(orderRecord, buyerRecord, goodRecord);

@@ -53,7 +53,7 @@ public class HashTable extends Table {
 
     public void setBaseColumns(String[] columnsKeys) {
         this.columns = new HashMap<String, Column>();
-        int columnsId = 0;
+        int columnsId = Column.FirstColumnsId;
         for (String key: columnsKeys) {
             Column column = new Column(key, columnsId);
             this.columns.put(key, column);
@@ -172,14 +172,19 @@ public class HashTable extends Table {
     }
 
     private HashMap<String, Object> parserBuffer(Data data, int len) {
+        String recordKey = data.readString();
+        return parserBuffer(data, len-recordKey.length()-4, recordKey);
+    }
+
+    private HashMap<String, Object> parserBuffer(Data data, int len, String recordKey) {
+        // 格式 [hashCode(int), length(int), keyString(int,string), [key1(int),value(type,[value])], ...]
         HashMap<String, Object> result = new HashMap<String, Object>();
+        result.put(this.columnsMap[0], recordKey);
         int oldPos = data.getPos();
-        byte type;
-        String key;
-        Object value;
         while (data.getPos() - oldPos < len) {
-            key = this.columnsMap[data.readInt()];
-            type = data.readByte();
+            String key = this.columnsMap[data.readInt()];
+            byte type = data.readByte();
+            Object value;
             switch (type) {
                 case Value.BOOLEAN_FALSE:
                     value = false;
@@ -245,16 +250,90 @@ public class HashTable extends Table {
                 } else {
                     String readKey = data.readString();
                     if (readKey.equals(key)) {
-                        result = parserBuffer(data, readLen-readKey.length()-4);
-                        result.put(this.columnsMap[0], readKey);
+                        result = parserBuffer(data, readLen-readKey.length()-4, readKey);
                         return result;
                     } else {
-                        data.skip(readLen-readKey.length());
+                        data.skip(readLen-readKey.length()-4);
                     }
                 }
             }
         }
         return null;
+    }
+
+    public ArrayList<HashMap<String, Object>> findOrders(String goodId) {
+        ArrayList<HashMap<String, Object>> results = new ArrayList<HashMap<String, Object>>();
+        int hashCode = HashIndex.getHashCode(goodId);
+        int pageId = index.getBucketIndex(hashCode);
+        PageStore pageStore = this.storeFiles.get(index.getFileIndex(hashCode));
+        HashDataPage page = pageStore.getPage(pageId);
+        Data data = new Data(page.getData().getBytes());
+        data.setPos(HashDataPage.HeaderLength);
+        pageId = page.getNextPage();
+        int dataLen = page.getDataLen();
+        while (true) {
+            int readHashCode = data.readInt();
+            int readLen = data.readInt();
+            if (data.getPos() + readLen <= dataLen) {  // 记录不跨页 处理记录
+                if (readHashCode == hashCode) {  // 解析记录
+                    String readKey = data.readString();
+                    if (readKey.equals(goodId)) {
+                        results.add(parserBuffer(data, readLen-readKey.length()-4, readKey));
+                    } else {
+                        data.skip(readLen-readKey.length()-4);
+                    }
+                } else {  // 跳过记录
+                    data.skip(readLen);
+                }
+                if (data.getPos() == dataLen) { // 处理到了页面末尾
+                    if (pageId == -1) {  // 没有了更多的页面
+                        break;
+                    }
+                    // 切换到下一页
+                    page = pageStore.getPage(pageId);
+                    data = new Data(page.getData().getBytes());
+                    data.setPos(HashDataPage.HeaderLength);
+                    pageId = page.getNextPage();
+                    dataLen = page.getDataLen();
+                }
+            } else {  // 跨页面处理
+                int leftLen = readLen + data.getPos() - dataLen;
+                if (readHashCode != hashCode) {
+                    // 切换到下一页第一条记录
+                    page = pageStore.getPage(pageId);
+                    data = new Data(page.getData().getBytes());
+                    data.setPos(HashDataPage.HeaderLength + leftLen);
+                    pageId = page.getNextPage();
+                    dataLen = page.getDataLen();
+                } else {
+                    // 读取完整记录 然后解析
+                    Data buffer = SafeData.getData();
+                    buffer.reset();
+                    buffer.copyFrom(data, data.getPos(), dataLen-data.getPos());
+                    while (true) {
+                        page = pageStore.getPage(pageId);
+                        data = new Data(page.getData().getBytes());
+                        data.setPos(HashDataPage.HeaderLength);
+                        pageId = page.getNextPage();
+                        dataLen = page.getDataLen();
+                        if (data.getPos() + leftLen < dataLen) {
+                            buffer.copyFrom(data, data.getPos(), leftLen);
+                            data.setPos(data.getPos()+leftLen);
+                            break;
+                        } else {
+                            buffer.copyFrom(data, data.getPos(), dataLen-data.getPos());
+                            leftLen -= (dataLen-data.getPos());
+                        }
+                    }
+                    buffer.reset();
+                    String readKey = buffer.readString();
+                    if (readKey.equals(goodId)) {  // 找到了记录
+                        results.add(parserBuffer(buffer, buffer.getPos()-readKey.length()-4, readKey));
+                    }
+                }
+            }
+        }
+        return results;
     }
 
 }

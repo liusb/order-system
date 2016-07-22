@@ -6,7 +6,6 @@ import com.alibaba.middleware.race.index.OrderIdRowIndex;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Map;
 
 public class OrderTable {
     private static OrderTable instance = new OrderTable();
@@ -85,6 +84,6 @@ public class OrderTable {
     }
 
     public ArrayList<HashMap<String, Object>> findOrders(String goodId) {
-        return null;
+        return this.baseTable.findOrders(goodId);
     }
 }
