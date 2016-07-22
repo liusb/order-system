@@ -45,7 +45,7 @@ public class OrderWriter implements Runnable {
         this.orderIndexOut = orderIndexOut;
         this.buyerIndexIndex = buyerIndexIndex;
         this.buyerIndexOut = buyerIndexOut;
-        this.buffer = new Data(new byte[Constants.PAGE_SIZE]);
+        this.buffer = new Data(new byte[8*Constants.PAGE_SIZE]);
         this.row = null;
         this.orderColumnId = orderColumnId;
         this.buyerIdColumnId = buyerIdColumnId;
