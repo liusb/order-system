@@ -82,11 +82,11 @@ public class MyOrderSystem implements OrderSystem {
         HashMap<String, Object> buyerRecord = BuyerTable.getInstance().find(buyerId);
         String goodId = ((String) orderRecord.get("goodid"));
         HashMap<String, Object> goodRecord = BuyerTable.getInstance().find(goodId);
-        HashMap<String, KeyValue> result;
+        HashMap<String, KVImpl> result;
         if (keys == null) {
             result = joinResult(orderRecord, buyerRecord, goodRecord);
         } else {
-            result = new HashMap<String, KeyValue>();
+            result = new HashMap<String, KVImpl>();
             for (String key: keys) {
                 Object value = orderRecord.get(key);
                 if (value == null) {
@@ -123,7 +123,7 @@ public class MyOrderSystem implements OrderSystem {
         for (HashMap<String, Object> order : orderRecords) {
             String goodId = ((String) order.get("goodid"));
             HashMap<String, Object> goodRecord = GoodTable.getInstance().find(goodId);
-            HashMap<String, KeyValue> result = joinResult(order, buyerRecord, goodRecord);
+            HashMap<String, KVImpl> result = joinResult(order, buyerRecord, goodRecord);
             results.add(new ResultImpl(((Long) order.get("orderid")), result, ((Long) order.get("createtime"))));
         }
         return new ResultIterator(results);
@@ -145,11 +145,11 @@ public class MyOrderSystem implements OrderSystem {
         for (HashMap<String, Object> order : orderRecords) {
             String buyerId = ((String) order.get("buyerid"));
             HashMap<String, Object> buyerRecord = BuyerTable.getInstance().find(buyerId);
-            HashMap<String, KeyValue> result;
+            HashMap<String, KVImpl> result;
             if (keys == null) {
                 result = joinResult(order, buyerRecord, goodRecord);
             } else {
-                result = new HashMap<String, KeyValue>();
+                result = new HashMap<String, KVImpl>();
                 for (String key: keys) {
                     Object value = order.get(key);
                     if (value == null) {
@@ -216,10 +216,10 @@ public class MyOrderSystem implements OrderSystem {
         }
     }
 
-    private HashMap<String, KeyValue> joinResult(HashMap<String, Object> orderRecord,
+    private HashMap<String, KVImpl> joinResult(HashMap<String, Object> orderRecord,
                                                  HashMap<String, Object> buyerRecord,
                                                  HashMap<String, Object> goodRecord) {
-        HashMap<String, KeyValue> result = new HashMap<String, KeyValue>();
+        HashMap<String, KVImpl> result = new HashMap<String, KVImpl>();
         for (Map.Entry<String, Object> entry: orderRecord.entrySet()) {
             result.put(entry.getKey(), new KVImpl(entry.getKey(), entry.getValue()));
         }

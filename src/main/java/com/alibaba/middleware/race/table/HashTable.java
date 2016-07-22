@@ -7,7 +7,6 @@ import com.alibaba.middleware.race.index.OrderIdRowIndex;
 import com.alibaba.middleware.race.index.RowIndex;
 import com.alibaba.middleware.race.store.Data;
 import com.alibaba.middleware.race.store.HashDataPage;
-import com.alibaba.middleware.race.store.Page;
 import com.alibaba.middleware.race.store.PageStore;
 import com.alibaba.middleware.race.type.Value;
 

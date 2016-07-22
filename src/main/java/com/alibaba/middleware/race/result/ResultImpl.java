@@ -8,21 +8,20 @@ import java.util.HashMap;
 public class ResultImpl implements OrderSystem.Result, Comparable<ResultImpl> {
 
     private long orderId;
-    private HashMap<String, OrderSystem.KeyValue> keyValue;
+    private HashMap<String, KVImpl> keyValue;
     private long createTime;
 
-    public ResultImpl(long orderId, HashMap<String, OrderSystem.KeyValue> keyValue) {
+    public ResultImpl(long orderId, HashMap<String, KVImpl> keyValue) {
         this.orderId = orderId;
         this.keyValue = keyValue;
         this.createTime = -1;
     }
 
-    public ResultImpl(long orderId, HashMap<String, OrderSystem.KeyValue> keyValue, long createTime) {
+    public ResultImpl(long orderId, HashMap<String, KVImpl> keyValue, long createTime) {
         this.orderId = orderId;
         this.keyValue = keyValue;
         this.createTime = createTime;
     }
-
 
     @Override
     public OrderSystem.KeyValue get(String key) {
@@ -46,5 +45,19 @@ public class ResultImpl implements OrderSystem.Result, Comparable<ResultImpl> {
         } else {
             return MathUtils.compareLong(this.createTime, o.createTime);
         }
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("orderid: " + orderId + " {");
+        if (keyValue != null && !keyValue.isEmpty()) {
+            for (KVImpl field : keyValue.values()) {
+                sb.append(field.toString());
+                sb.append(",\n");
+            }
+        }
+        sb.append('}');
+        return sb.toString();
     }
 }
