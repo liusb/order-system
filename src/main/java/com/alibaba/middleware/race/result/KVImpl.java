@@ -48,4 +48,9 @@ public class KVImpl implements OrderSystem.KeyValue {
             throw new OrderSystem.TypeException();
         }
     }
+
+    @Override
+    public String toString() {
+        return "[" + this.key + "]:" + this.value;
+    }
 }
