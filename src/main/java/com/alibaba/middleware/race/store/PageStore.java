@@ -119,14 +119,14 @@ public class PageStore implements CacheWriter {
     }
 
     public long insertData(int pageId, Data buffer) {
-        HashDataPage page = getBucket(pageId);
+        HashDataPage page = getBucket(pageId);   // 获取桶中可写入的页
         Data data = page.getData();
         if (data.getLength() - data.getPos() < 8) {  // 剩余空间太小，不足写入hashCode和length
             // 分配新页， 写入旧页
             page = expandBucket(page);
             data = page.getData();
         }
-        long address = ((long)pageId*pageSize + data.getPos());  // 返回记录写入的地址
+        long address = ((long)page.getPageId()*pageSize + data.getPos());  // 返回记录写入的地址
         int copyPos = 0;
         while (true) {
             int emptyLength = data.getLength() - data.getPos();
