@@ -83,6 +83,7 @@ public class OrderWriter implements Runnable {
         OrderIdRowIndex orderIdRowIndex = new OrderIdRowIndex(this.fileId, this.address);
         long orderId = ((Long) row.getValue(orderColumnId));
         int hashCode = HashIndex.getHashCode(row.getValue(orderColumnId));
+        orderIdRowIndex.setHashCode(hashCode);
         orderIdRowIndex.setOrderId(orderId);
         sendToQueue(orderIndexOut.get(orderIndexIndex.getFileIndex(hashCode)), orderIdRowIndex);
     }
