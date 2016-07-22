@@ -17,7 +17,7 @@ import java.util.*;
  * @author wangxiang@alibaba-inc.com
  *
  */
-public class MyOrderSystem implements OrderSystem {
+public class OrderSystemImpl implements OrderSystem {
 
 //    private HashMap<String, Column> orderColumns = new HashMap<String, Column>();
 //    private HashMap<String, Column> goodColumns = new HashMap<String, Column>();

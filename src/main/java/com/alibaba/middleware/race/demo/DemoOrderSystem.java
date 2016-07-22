@@ -18,7 +18,7 @@ import java.util.TreeMap;
  * @author wangxiang@alibaba-inc.com
  *
  */
-public class OrderSystemImpl implements OrderSystem {
+public class DemoOrderSystem implements OrderSystem {
 
   final List<String> comparableKeysOrderingByOrderId;
 
@@ -59,14 +59,14 @@ public class OrderSystemImpl implements OrderSystem {
     }
   }
 
-  TreeMap<ComparableKeys, Record> orderDataSortedByOrder = new TreeMap<OrderSystemImpl.ComparableKeys, Record>();
-  TreeMap<ComparableKeys, Record> orderDataSortedByBuyerCreateTime = new TreeMap<OrderSystemImpl.ComparableKeys, Record>();
-  TreeMap<ComparableKeys, Record> orderDataSortedBySalerGood = new TreeMap<OrderSystemImpl.ComparableKeys, Record>();
-  TreeMap<ComparableKeys, Record> orderDataSortedByGood = new TreeMap<OrderSystemImpl.ComparableKeys, Record>();
-  TreeMap<ComparableKeys, Record> buyerDataStoredByBuyer = new TreeMap<OrderSystemImpl.ComparableKeys, Record>();
-  TreeMap<ComparableKeys, Record> goodDataStoredByGood = new TreeMap<OrderSystemImpl.ComparableKeys, Record>();
+  TreeMap<ComparableKeys, Record> orderDataSortedByOrder = new TreeMap<DemoOrderSystem.ComparableKeys, Record>();
+  TreeMap<ComparableKeys, Record> orderDataSortedByBuyerCreateTime = new TreeMap<DemoOrderSystem.ComparableKeys, Record>();
+  TreeMap<ComparableKeys, Record> orderDataSortedBySalerGood = new TreeMap<DemoOrderSystem.ComparableKeys, Record>();
+  TreeMap<ComparableKeys, Record> orderDataSortedByGood = new TreeMap<DemoOrderSystem.ComparableKeys, Record>();
+  TreeMap<ComparableKeys, Record> buyerDataStoredByBuyer = new TreeMap<DemoOrderSystem.ComparableKeys, Record>();
+  TreeMap<ComparableKeys, Record> goodDataStoredByGood = new TreeMap<DemoOrderSystem.ComparableKeys, Record>();
 
-  public OrderSystemImpl() {
+  public DemoOrderSystem() {
     comparableKeysOrderingByOrderId = new ArrayList<String>();
     comparableKeysOrderingByBuyerCreateTimeOrderId = new ArrayList<String>();
     comparableKeysOrderingBySalerGoodOrderId = new ArrayList<String>();

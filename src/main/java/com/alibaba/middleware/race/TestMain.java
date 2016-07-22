@@ -23,7 +23,7 @@ public class TestMain {
         storeFolders.add("./2");
         storeFolders.add("./3");
 
-        OrderSystem os = new MyOrderSystem();
+        OrderSystem os = new OrderSystemImpl();
         long beginTime = System.currentTimeMillis();
         os.construct(orderFiles, buyerFiles, goodFiles, storeFolders);
         System.out.println("============>" + (System.currentTimeMillis() - beginTime));
