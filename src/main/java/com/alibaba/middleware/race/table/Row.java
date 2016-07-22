@@ -52,7 +52,8 @@ public class Row {
     }
 
     /**
-     * 将数据序列化到byte数组中
+     * 将数据序列化到byte数组中 格式
+     * [hashCode(int), length(int), keyString(int,string), [key1(int),value(type,[value])], ...]
      * @param buffer 保证要足够大
      */
     public int writeToBytes(Data buffer) {
@@ -60,6 +61,8 @@ public class Row {
         buffer.reset();
         buffer.writeInt(hashCode);
         buffer.skip(4);
+        buffer.writeString(((String) values.get(0)));
+        values.remove(0);
         for (Map.Entry<Integer, Object> entry: values.entrySet()) {
             buffer.writeInt(entry.getKey());
             value = entry.getValue();
@@ -76,10 +79,11 @@ public class Row {
                 buffer.writeByte(Value.DOUBLE);
                 buffer.writeDouble((Double) value);
             } else {
+                buffer.writeByte(Value.STRING);
                 buffer.writeString(((String) value));
             }
         }
-        buffer.setInt(0, buffer.getPos()-4);
+        buffer.setInt(4, buffer.getPos()-8);
         return buffer.getPos();
     }
 }
