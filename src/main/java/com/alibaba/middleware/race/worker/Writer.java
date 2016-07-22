@@ -22,7 +22,7 @@ public class Writer implements Runnable {
         this.in = in;
         this.pageFile = pageFile;
         this.index = index;
-        this.buffer = new Data(new byte[8*Constants.PAGE_SIZE]);
+        this.buffer = new Data(new byte[128*1024]);
         this.row = null;
         this.inCount = 0;
         this.threadId = 0;
