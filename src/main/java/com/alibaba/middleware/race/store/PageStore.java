@@ -152,7 +152,7 @@ public class PageStore implements CacheWriter {
             page = expandBucket(page);
             data = page.getData();
         }
-        System.arraycopy(buffer.getBytes(), 0, data.getBytes(), data.getPos(), buffer.getPos());
+        data.copyFrom(buffer, 0, buffer.getPos());
     }
 
     public void writeAllChanged() {

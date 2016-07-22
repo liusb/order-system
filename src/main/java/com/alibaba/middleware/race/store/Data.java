@@ -139,4 +139,9 @@ public class Data {
         pos = p;
         return new String(chars);
     }
+
+    public void copyFrom(Data src, int srcPos, int len) {
+        System.arraycopy(src.data, srcPos, this.data, this.pos, len);
+        this.pos += len;
+    }
 }
