@@ -4,12 +4,16 @@ import com.alibaba.middleware.race.cache.CacheObject;
 
 public abstract class Page extends CacheObject {
 
-    public static final byte TYPE_DATA_HASH = 1;
-
     public static final int DataLenPos = 0;
     protected int dataLen;
 
     protected Data data;
+
+    public Page(Data data, int dataLen) {
+        this.data = data;
+        this.dataLen = dataLen;
+        this.data.setPos(dataLen);
+    }
 
     @Override
     public int getMemory() {
