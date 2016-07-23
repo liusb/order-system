@@ -4,7 +4,6 @@ import com.alibaba.middleware.race.index.HashIndex;
 import com.alibaba.middleware.race.store.Data;
 import com.alibaba.middleware.race.store.PageStore;
 import com.alibaba.middleware.race.table.Row;
-import com.alibaba.middleware.race.utils.Constants;
 
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -52,8 +51,8 @@ public class Writer implements Runnable {
                 break;
             }
             row.writeToBytes(buffer);
-            int PageId = index.getBucketIndex(row.getHashCode());
-            pageFile.insertData(PageId, buffer);
+            int bucketId = index.getBucketId(row.getHashCode());
+            pageFile.insertData(bucketId, buffer);
             inCount++;
 //            if(inCount % 30 == 0) {
 //                System.out.println("INFO: Writer count is:" + inCount + ". Thread id:" + threadId);

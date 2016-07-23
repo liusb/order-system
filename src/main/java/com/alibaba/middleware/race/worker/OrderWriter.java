@@ -6,7 +6,6 @@ import com.alibaba.middleware.race.index.OrderIdRowIndex;
 import com.alibaba.middleware.race.store.Data;
 import com.alibaba.middleware.race.store.PageStore;
 import com.alibaba.middleware.race.table.Row;
-import com.alibaba.middleware.race.utils.Constants;
 
 import java.util.ArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -109,8 +108,8 @@ public class OrderWriter implements Runnable {
                 break;
             }
             row.writeToBytes(buffer);
-            int PageId = index.getBucketIndex(row.getHashCode());
-            this.address = pageFile.insertData(PageId, buffer);
+            int bucketId = index.getBucketId(row.getHashCode());
+            this.address = pageFile.insertData(bucketId, buffer);
             // 输出索引
             this.outputOrderIndex();
             this.outputBuyerIndex();

@@ -1,4 +1,4 @@
-package com.alibaba.middleware.race;
+package com.alibaba.middleware.race.utils;
 
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;

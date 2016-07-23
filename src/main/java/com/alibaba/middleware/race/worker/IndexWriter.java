@@ -52,8 +52,8 @@ public class IndexWriter<T extends RowIndex> implements Runnable {
                 break;
             }
             row.writeToBuffer(buffer);
-            int PageId = index.getBucketIndex(row.getHashCode());
-            pageFile.insertIndexData(PageId, buffer);
+            int bucketId = index.getBucketId(row.getHashCode());
+            pageFile.insertIndexData(bucketId, buffer);
             inCount++;
 //            if(inCount % 30 == 0) {
 //                System.out.println("INFO: Writer count is:" + inCount + ". Thread id:" + threadId);

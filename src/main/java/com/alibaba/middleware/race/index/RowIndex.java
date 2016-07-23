@@ -3,6 +3,7 @@ package com.alibaba.middleware.race.index;
 import com.alibaba.middleware.race.store.Data;
 
 public abstract class RowIndex {
+    // todo 修改为具体类，使查询返回的结果为这个类的实例，以减少内存使用
 
     public static final long EMPTY_FLAG = -1;
 

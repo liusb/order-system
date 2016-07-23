@@ -13,6 +13,7 @@ public class HashIndex {
     }
 
     public static int getHashCode(Object key) {
+        // todo 查找是否有更好的hash方法
         if (key instanceof String) {
             return sun.misc.Hashing.stringHash32((String) key);
         }
@@ -29,7 +30,7 @@ public class HashIndex {
         return (hashCode >>> bucketBitSize)%fileCount;
     }
 
-    public int getBucketIndex(int hashCode) {
+    public int getBucketId(int hashCode) {
         return hashCode & this.bitAnd;
     }
 
