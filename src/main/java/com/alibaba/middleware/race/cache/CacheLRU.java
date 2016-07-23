@@ -54,8 +54,10 @@ public class CacheLRU implements Cache {
     public CacheObject get(int pos) {
         CacheObject obj = find(pos);
         if (obj != null) {
-            removeFromLinkedList(obj);
-            addToFront(obj);
+            if (obj.previous!=null && obj.next!=null) {
+                removeFromLinkedList(obj);
+                addToFront(obj);
+            }
         }
         return obj;
     }
@@ -139,11 +141,12 @@ public class CacheLRU implements Cache {
         head.previous = rec;
     }
 
-    private void removeFromLinkedList(CacheObject rec) {
-        rec.previous.next = rec.next;
-        rec.next.previous = rec.previous;
-        rec.next = null;
-        rec.previous = null;
+    @Override
+    public void removeFromLinkedList(CacheObject obj) {
+        obj.previous.next = obj.next;
+        obj.next.previous = obj.previous;
+        obj.next = null;
+        obj.previous = null;
     }
 
     private void removeOldIfRequired() {
