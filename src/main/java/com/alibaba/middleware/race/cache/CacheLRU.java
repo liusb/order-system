@@ -142,11 +142,16 @@ public class CacheLRU implements Cache {
     }
 
     @Override
-    public void removeFromLinkedList(CacheObject obj) {
-        obj.previous.next = obj.next;
-        obj.next.previous = obj.previous;
-        obj.next = null;
-        obj.previous = null;
+    public void removeData(CacheObject rec) {
+        removeFromLinkedList(rec);
+        this.memory -= rec.getMemory();
+    }
+
+    private void removeFromLinkedList(CacheObject rec) {
+        rec.previous.next = rec.next;
+        rec.next.previous = rec.previous;
+        rec.next = null;
+        rec.previous = null;
     }
 
     private void removeOldIfRequired() {

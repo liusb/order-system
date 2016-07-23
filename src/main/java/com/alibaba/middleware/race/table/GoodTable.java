@@ -14,11 +14,11 @@ public class GoodTable {
     private GoodTable() { }
 
     // 哈希桶的总个数
-    private static final int TABLE_BUCKET_SIZE = 256;
+    private static final int TABLE_BUCKET_SIZE = 4;//256;
     // 建立表示很LRU缓存的大小
-    private static final int TABLE_CACHE_SIZE = 128;
+    private static final int TABLE_CACHE_SIZE = 2;//128;
     // 每页的大小，单位为byte
-    private static final int TABLE_PAGE_SIZE = 8*(1<<10);
+    private static final int TABLE_PAGE_SIZE = 1*(1<<10);
     private static final String[] TABLE_COLUMNS = {"goodid"};
     public HashTable baseTable;
 

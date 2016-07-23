@@ -16,7 +16,7 @@ public interface Cache {
 
     boolean remove(int pos);
 
-    void removeFromLinkedList(CacheObject obj);
+    void removeData(CacheObject rec);
 
     void setMaxMemory(int size);
 

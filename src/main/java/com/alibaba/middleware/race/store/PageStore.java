@@ -16,6 +16,7 @@ public class PageStore implements CacheWriter {
     private final String fileName;
     private final int bucketSize;
     private final int pageSize;
+    private int nextOverflowPageId;
 
     private FileStore file;
     private String mode;
@@ -24,6 +25,7 @@ public class PageStore implements CacheWriter {
     public PageStore(String fileName, int bucketSize, int pageSize) {
         this.fileName = fileName;
         this.bucketSize = bucketSize;
+        this.nextOverflowPageId = bucketSize;
         this.pageSize = pageSize;
     }
 
@@ -34,7 +36,7 @@ public class PageStore implements CacheWriter {
             this.cache = new CacheLRU(this, cacheSize, pageSize);
             if (mode.equals("rw")) {
                 this.usedSet = new BitSet(bucketSize);  // 初始化为bucketSize大小，然后随着页的分配增加
-                this.file.setLength(bucketSize*pageSize);   // todo 需要预估计分配大小，应该比所有桶大小更大
+                this.file.setLength(bucketSize*pageSize*100);  // 需要预估计分配大小，应该比所有桶大小更大
             }
         }catch (Exception e) {
             e.printStackTrace();
@@ -56,83 +58,86 @@ public class PageStore implements CacheWriter {
         }
     }
 
+    // 此方法为读取用
     public synchronized HashDataPage getPage(int pageId) {
         HashDataPage p = (HashDataPage) cache.get(pageId);
         if (p != null) {
             return p;
         }
-        return loadPage(pageId);
-    }
-
-    private HashDataPage loadPage(int pageId) {
         Data data = new Data(new byte[pageSize]);
-        HashDataPage page = new HashDataPage(data, pageId);
         file.seek(((long) pageId) * pageSize);
-        file.read(page.getData().getBytes(), 0, pageSize);
-        page.readHeader();
+        file.read(data.getBytes(), 0, pageSize);
+        HashDataPage page = new HashDataPage(data, pageId);
+        page.parseHeader();
         cache.put(page);
         return page;
     }
 
-    // 分配第一个桶
-    private HashDataPage allocateBucket(int bucketId) {
-        if (usedSet.get(bucketId)) {
-            return loadPage(bucketId);
-        } else {   // 分配新桶
-            Data data = new Data(new byte[pageSize]);
-            HashDataPage page = new HashDataPage(data, bucketId);
-            page.setChanged(true);
-            page.setPos(bucketId);
-            usedSet.set(bucketId);
-            cache.put(page);
-            return page;
-        }
+
+
+    // 此方法为写入用
+    private HashDataPage loadBucketPage(int pageId) {
+        Data data = new Data(new byte[pageSize]);
+        file.seek(((long) pageId) * pageSize);
+        file.read(data.getBytes(), 0, pageSize);
+        HashDataPage page = new HashDataPage(data, pageId);
+        page.parseHeader();
+        data.setPos(page.getDataLen());
+        page.setChanged(true);
+        cache.put(page);
+        return page;
     }
 
     // 获取桶中首个可以写入数据的页
     private HashDataPage getBucket(int bucketId) {
         HashDataPage page = (HashDataPage)cache.get(bucketId);
-        if (page != null) {
-            if (page.dataIsFree()) { // 桶已经溢出, 指向目前可以写入的页
+        if (page != null) {  // 1. 在缓存中
+            if (!page.dataIsFree()) {  // 1.1 没有写满，直接返回
+                return page;
+            } else  { // 1.2 桶已经溢出, 指向目前可以写入的页
                 int nextPageId = page.getNextPage();
                 page = (HashDataPage)cache.get(nextPageId);
-                if (page == null) {  // 页已经被置换出去，重新读入
-                    page = loadPage(nextPageId);
+                if (page == null) {  // 1.2.1 页已经被置换出去，重新读入
+                    if (!usedSet.get(nextPageId)) {
+                        throw new RuntimeException("页面被置换，却没分配不合逻辑");
+                    }
+                    page = loadBucketPage(nextPageId);
                 }
+                return page;
             }
-        } else {
-            page = allocateBucket(bucketId);
+        } else if(usedSet.get(bucketId)){   // 2. 不在缓存中，但已经分配过，那就从磁盘读入，并放入缓存
+            return loadBucketPage(bucketId);
+        } else {   // 3. 不在缓存中，而且没有分配过，那就分配并放入缓存
+            Data data = new Data(new byte[pageSize]);
+            page = new HashDataPage(data, bucketId);
+            usedSet.set(bucketId);
+            page.setChanged(true);
+            cache.put(page);
+            return page;
         }
-        return page;
     }
 
     // 向桶中添加页
     private HashDataPage expandBucket(HashDataPage oldPage, int bucketId) {
+        int newPageId = (this.nextOverflowPageId++);
+        Data oldData = oldPage.getData();
+        // 修改旧页的下一页表项, 将改页写入文件
+        oldPage.setNextPage(newPageId);
+        this.writeBack(oldPage);
         if (bucketId == oldPage.getPageId()) { // 桶中第一个页溢出
-            Data oldData = oldPage.getData();
-            int newPageId = usedSet.length();
-            usedSet.set(newPageId);
-            file.setLength(file.getLength() + pageSize);
-            // 修改旧页的下一页表项, 将改页写入文件
-            oldPage.setNextPage(newPageId);
-            this.writeBack(oldPage);
-            oldPage.freeData();
             // 将该页从缓存链表中移出
-            cache.removeFromLinkedList(oldPage);
-            return new HashDataPage(oldData, newPageId);
-        } else {  // 不是第一个溢出的桶
-            Data oldData = oldPage.getData();
-            long oldLength = file.getLength();
-            file.setLength(oldLength + pageSize);
-            int newPageId = (int) (oldLength / pageSize);
-            // 修改旧页的下一页表项, 将改页写入文件
-            oldPage.setNextPage(newPageId);
-            this.writeBack(oldPage);
-            oldPage.freeData();
+            cache.removeData(oldPage);
+        } else {  // 不是第一个溢出的桶, 找到第一页，指向新的溢出页
             HashDataPage firstPage = (HashDataPage)cache.find(bucketId);
             firstPage.setNextPage(newPageId);
-            return new HashDataPage(oldData, newPageId);
+            cache.remove(oldPage.getPos());
         }
+        oldPage.freeData();
+        HashDataPage newPage = new HashDataPage(oldData, newPageId);
+        usedSet.set(newPageId);
+        newPage.setChanged(true);
+        cache.put(newPage);
+        return newPage;
     }
 
     public long insertData(int bucketId, Data buffer) {
@@ -150,11 +155,14 @@ public class PageStore implements CacheWriter {
             if (emptyLength < buffer.getPos() - copyPos) {  // 写不下全部，写入一部分
                 // 写入数据
                 data.copyFrom(buffer, copyPos, emptyLength);
-                copyPos = buffer.getPos() - emptyLength;
+                copyPos += emptyLength;
                 page = expandBucket(page, bucketId);
                 data = page.getData();
             } else {
                 data.copyFrom(buffer, copyPos, buffer.getPos()-copyPos);
+                if (emptyLength == buffer.getPos()-copyPos) { // 正好写满，分配新页
+                    expandBucket(page, bucketId);
+                }
                 break;
             }
         }
@@ -176,9 +184,7 @@ public class PageStore implements CacheWriter {
         ArrayList<CacheObject> changed = cache.getAllChanged();
         if (changed.size() > 0) {
             Collections.sort(changed);
-            int size = changed.size();
-            for (int i = 0; i < size; i++) {
-                CacheObject rec = changed.get(i);
+            for (CacheObject rec: changed) {
                 this.writeBack(rec);
             }
         }
@@ -191,8 +197,13 @@ public class PageStore implements CacheWriter {
         int dataLen = data.getPos();
         page.setDataLen(dataLen);
         page.writeHeader();
-        file.seek(((long)page.getPos())*pageSize);
-        file.write(data.getBytes(), 0, dataLen);
+        long writePos = ((long)page.getPos())*pageSize;
+        file.seek(writePos);
+        if (writePos + pageSize < file.getLength()) {
+            file.write(data.getBytes(), 0, dataLen);
+        }else {
+            file.write(data.getBytes(), 0, data.getLength());
+        }
         page.setChanged(false);
     }
 }

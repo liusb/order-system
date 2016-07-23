@@ -19,7 +19,7 @@ public class HashDataPage extends Page {
         this.data.setInt(NextPos, nextPage);
     }
 
-    public void readHeader() {
+    public void parseHeader() {
         int pos = this.data.getPos();
         this.data.reset();
         dataLen = this.data.readInt();
@@ -46,6 +46,6 @@ public class HashDataPage extends Page {
 
     @Override
     public boolean canRemove() {
-        return !dataIsFree();
+        return true;
     }
 }
