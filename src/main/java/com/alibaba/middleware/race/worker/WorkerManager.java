@@ -248,9 +248,9 @@ public class WorkerManager {
             HashIndex orderIndexIndex, ArrayList<LinkedBlockingQueue<OrderIdRowIndex>> orderIndexOut,
             HashIndex buyerIndexIndex, ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexOut) {
         ArrayList<OrderWriter> writers = new ArrayList<OrderWriter>();
-        int orderColumnId = table.getColumn("orderid").getColumnId();
-        int buyerIdColumnId = table.getColumn("buyerid").getColumnId();
-        int buyerCreateTimeColumnId = table.getColumn("createtime").getColumnId();
+        int orderColumnId = table.getColumnId("orderid");
+        int buyerIdColumnId = table.getColumnId("buyerid");
+        int buyerCreateTimeColumnId = table.getColumnId("createtime");
         for (int i=0; i< outQueues.size(); i++) {
             writers.add(new OrderWriter(outQueues.get(i), table.getPageFiles().get(i), (byte)i, table.getIndex(),
                     orderIndexIndex, orderIndexOut, buyerIndexIndex, buyerIndexOut,

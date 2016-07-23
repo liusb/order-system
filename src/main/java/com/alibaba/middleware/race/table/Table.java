@@ -6,27 +6,27 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public abstract class Table {
-    protected HashMap<String, Column> columns;
+    protected HashMap<String, Integer> columns;
     protected ArrayList<PageStore> storeFiles;
     protected String name;
 
-    public Column getColumn(String name) {
-        Column column = columns.get(name);
-        if (column != null) {
-            return column;
+    public int getColumnId(String name) {
+        Integer columnId = columns.get(name);
+        if (columnId != null) {
+            return columnId;
         } else {
             return addColumn(name);
         }
     }
 
-    private synchronized Column addColumn(String name) {
-        Column column = columns.get(name);
-        if (column != null) {
-            return column;
+    private synchronized int addColumn(String name) {
+        Integer columnId = columns.get(name);
+        if (columnId != null) {
+            return columnId;
         } else {
-            column = new Column(name, columns.size());
-            columns.put(name, column);
-            return column;
+            columnId = columns.size();
+            columns.put(name, columnId);
+            return columnId;
         }
     }
 

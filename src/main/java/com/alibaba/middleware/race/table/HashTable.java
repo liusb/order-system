@@ -46,17 +46,16 @@ public class HashTable extends Table {
 
     private void initColumnsMap() {
         columnsMap = new String[columns.size()];
-        for (Map.Entry<String, Column> entry: this.columns.entrySet()) {
-            columnsMap[entry.getValue().getColumnId()] = entry.getKey();
+        for (Map.Entry<String, Integer> entry: this.columns.entrySet()) {
+            columnsMap[entry.getValue()] = entry.getKey();
         }
     }
 
     public void setBaseColumns(String[] columnsKeys) {
-        this.columns = new HashMap<String, Column>();
-        int columnsId = Column.FirstColumnsId;
+        this.columns = new HashMap<String, Integer>();
+        int columnsId = columns.size();
         for (String key: columnsKeys) {
-            Column column = new Column(key, columnsId);
-            this.columns.put(key, column);
+            this.columns.put(key, columnsId);
             columnsId++;
         }
     }

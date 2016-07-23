@@ -1,7 +1,6 @@
 package com.alibaba.middleware.race.worker;
 
 import com.alibaba.middleware.race.index.HashIndex;
-import com.alibaba.middleware.race.table.Column;
 import com.alibaba.middleware.race.table.HashTable;
 import com.alibaba.middleware.race.table.Row;
 
@@ -45,9 +44,9 @@ public class Parser implements Runnable {
             if (key.length() == 0 || value.length() == 0) {
                 throw new RuntimeException("Bad data:" + line);
             }
-            Column column = this.table.getColumn(key);
-            row.insert(column.getColumnId(), value);
-            if (column.getColumnId() == Column.FirstColumnsId) {
+            int columnId = this.table.getColumnId(key);
+            row.insert(columnId, value);
+            if (columnId == 0) {
                 row.setHashCode(HashIndex.getHashCode(value));
             }
         }
