@@ -47,8 +47,21 @@ public class OrderSystemImpl implements OrderSystem {
         manager.setGoodFiles(goodFiles);
         manager.setOrderFiles(orderFiles);
 
+        printDir(orderFiles, "orderFiles");
+        printDir(buyerFiles, "buyerFiles");
+        printDir(goodFiles, "goodFiles");
+        printDir(storeFolders, "storeFolders");
+
         manager.run();
-      }
+    }
+
+    private void printDir(Collection<String> dir, String name) {
+        System.out.println(name + "======>>>>>");
+        for (String file: dir) {
+            System.out.println(file);
+        }
+    }
+
 
     /**
      * 查询订单号为orderid的指定字段
