@@ -13,9 +13,9 @@ public class BuyerTable {
 
 
     // 哈希桶的总个数
-    private static final int TABLE_BUCKET_SIZE = 1024;
+    private static final int TABLE_BUCKET_SIZE = 512;
     // 建立表示很LRU缓存的大小
-    private static final int TABLE_CACHE_SIZE = 1024;
+    private static final int TABLE_CACHE_SIZE = 256;
     // 每页的大小，单位为byte
     private static final int TABLE_PAGE_SIZE = 16*(1<<10);
     private static final String[] TABLE_COLUMNS = {"buyerid"};

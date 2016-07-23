@@ -69,7 +69,7 @@ public class HashTable extends Table {
         ArrayList<BuyerIdRowIndex> results = new ArrayList<BuyerIdRowIndex>();
         int hashCode = HashIndex.getHashCode(buyerId);
         PageStore pageStore = storeFiles.get(index.getFileIndex(hashCode));
-        int bucketIndex = index.getBucketIndex(hashCode);
+        int bucketIndex = index.getBucketId(hashCode);
         int readHashCode;
         String readString;
         long readTime;
@@ -112,7 +112,7 @@ public class HashTable extends Table {
     public OrderIdRowIndex findIndex(long orderId) {
         int hashCode = HashIndex.getHashCode(orderId);
         PageStore pageStore = storeFiles.get(index.getFileIndex(hashCode));
-        int bucketIndex = index.getBucketIndex(hashCode);
+        int bucketIndex = index.getBucketId(hashCode);
         HashDataPage page;
         Data data;
         long readOrderId;
@@ -209,7 +209,7 @@ public class HashTable extends Table {
     public HashMap<String, Object> findRecord(String key) {
         HashMap<String, Object> result;
         int hashCode = HashIndex.getHashCode(key);
-        int pageId = index.getBucketIndex(hashCode);
+        int pageId = index.getBucketId(hashCode);
         int fileId = index.getFileIndex(hashCode);
         PageStore pageStore = this.storeFiles.get(fileId);
         HashDataPage page = pageStore.getPage(pageId);
@@ -264,7 +264,7 @@ public class HashTable extends Table {
     public ArrayList<HashMap<String, Object>> findOrders(String goodId) {
         ArrayList<HashMap<String, Object>> results = new ArrayList<HashMap<String, Object>>();
         int hashCode = HashIndex.getHashCode(goodId);
-        int pageId = index.getBucketIndex(hashCode);
+        int pageId = index.getBucketId(hashCode);
         PageStore pageStore = this.storeFiles.get(index.getFileIndex(hashCode));
         HashDataPage page = pageStore.getPage(pageId);
         Data data = new Data(page.getData().getBytes());
