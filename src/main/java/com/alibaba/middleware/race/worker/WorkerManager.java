@@ -13,7 +13,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class WorkerManager {
 
-    private static final int PARSER_THREAD_NUM = 4;
+    private static final int PARSER_THREAD_NUM = 8;
     private static final int QUEUE_SIZE = 32;
 
     private Collection<String> storeFolders;
