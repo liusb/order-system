@@ -16,6 +16,11 @@ public class Data {
         pos = 0;
     }
 
+    public Data(byte[] data, int pos) {
+        this.data = data;
+        this.pos = pos;
+    }
+
     public byte[] getBytes() {
         return data;
     }
