@@ -29,6 +29,10 @@ public class Data {
         return data.length;
     }
 
+    public int getEmptySize() {
+        return data.length-pos;
+    }
+
     public int getPos() {
         return pos;
     }

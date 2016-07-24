@@ -119,7 +119,7 @@ public class PageStore implements CacheWriter {
     private HashDataPage expandBucket(HashDataPage oldPage, int bucketId) {
         int newPageId = (this.nextOverflowPageId++);
         Data oldData = oldPage.getData();
-        // 修改旧页的下一页表项, 将改页写入文件
+        // 修改旧页的下一页表项, 将该页写入文件
         oldPage.setNextPage(newPageId);
         this.writeBack(oldPage);
         if (bucketId == oldPage.getPageId()) { // 桶中第一个页溢出
@@ -141,16 +141,16 @@ public class PageStore implements CacheWriter {
     public long insertData(int bucketId, Data buffer) {
         HashDataPage page = getBucket(bucketId);   // 获取桶中可写入的页
         Data data = page.getData();
-        if (data.getLength() - data.getPos() < 8) {  // 剩余空间太小，不足写入hashCode和length
+        if (data.getEmptySize() < 8) {  // 剩余空间太小，不足写入hashCode和length
             // 分配新页， 写入旧页
             page = expandBucket(page, bucketId);
             data = page.getData();
         }
-        long address = ((long)page.getPageId()*pageSize + data.getPos());  // 返回记录写入的地址
+        long address = ((long)page.getPageId())*pageSize + data.getPos();  // 返回记录写入的地址
         int copyPos = 0;
         while (true) {
-            int emptyLength = data.getLength() - data.getPos();
-            if (emptyLength < buffer.getPos() - copyPos) {  // 写不下全部，写入一部分
+            int emptyLength = data.getEmptySize();
+            if (copyPos + emptyLength < buffer.getPos()) {  // 写不下全部，写入一部分
                 // 写入数据
                 data.copyFrom(buffer, copyPos, emptyLength);
                 copyPos += emptyLength;
@@ -158,9 +158,9 @@ public class PageStore implements CacheWriter {
                 data = page.getData();
             } else {
                 data.copyFrom(buffer, copyPos, buffer.getPos()-copyPos);
-                if (emptyLength == buffer.getPos()-copyPos) { // 正好写满，分配新页
-                    expandBucket(page, bucketId);
-                }
+//                if (copyPos + emptyLength == buffer.getPos()) { // 正好写满，分配新页
+//                    expandBucket(page, bucketId);
+//                }
                 break;
             }
         }
@@ -228,6 +228,7 @@ public class PageStore implements CacheWriter {
                     }
                     page = getPage(pageId);
                     data = page.getData();
+                    data.setPos(HashDataPage.HeaderLength);
                     dataLen = page.getDataLen();
                     pageId = page.getNextPage();
                 }
@@ -239,6 +240,12 @@ public class PageStore implements CacheWriter {
                 }
                 int copyLen = Math.min(readLen - buffer.getPos(), dataLen - data.getPos());
                 if (data.getPos()+copyLen > data.getLength()) {
+                    throw new RuntimeException("超出数组长度");
+                }
+                if (buffer.getPos()+copyLen > buffer.getLength()) {
+                    throw new RuntimeException("超出数组长度");
+                }
+                if (copyLen < 0) {
                     throw new RuntimeException("超出数组长度");
                 }
                 buffer.copyFrom(data, data.getPos(), copyLen);
