@@ -13,8 +13,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class WorkerManager {
 
-    private final int PARSER_THREAD_NUM = 4;
-    private final int QUEUE_SIZE = 32;
+    private static final int PARSER_THREAD_NUM = 4;
+    private static final int QUEUE_SIZE = 32;
 
     private Collection<String> storeFolders;
     private Collection<String> orderFiles;
@@ -53,22 +53,6 @@ public class WorkerManager {
         OrderTable.getInstance().reopen();
         BuyerTable.getInstance().reopen();
         GoodTable.getInstance().reopen();
-
-        long totalCount = 0;
-        for (PageStore pageFile: GoodTable.getInstance().baseTable.getPageFiles()) {
-            totalCount += pageFile.FileCheck();
-        }
-        System.out.println("========================total Count:" + totalCount);
-        totalCount = 0;
-        for (PageStore pageFile: BuyerTable.getInstance().baseTable.getPageFiles()) {
-            totalCount += pageFile.FileCheck();
-        }
-        System.out.println("========================total Count:" + totalCount);
-        totalCount = 0;
-        for (PageStore pageFile: OrderTable.getInstance().baseTable.getPageFiles()) {
-            totalCount += pageFile.FileCheck();
-        }
-        System.out.println("========================total Count:" + totalCount);
     }
 
     private void processGoodRecord() {
