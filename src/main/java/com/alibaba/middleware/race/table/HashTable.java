@@ -76,8 +76,7 @@ public class HashTable extends Table {
         Data data;
         while (true) {
             page = pageStore.getPage(bucketIndex);
-            data = new Data(page.getData().getBytes());
-            data.setPos(HashDataPage.HeaderLength);
+            data = new Data(page.getData().getBytes(), HashDataPage.HeaderLength);
             // [hashCode(int), buyerId(len,string), createTime(long), fileId(byte), address(long)]
             while (data.getPos() < page.getDataLen()) {
                 readHashCode = data.readInt();
@@ -142,29 +141,24 @@ public class HashTable extends Table {
         int pageId = (int)(rowIndex.getAddress()/this.pageSize);
         int offset = (int)(rowIndex.getAddress()%this.pageSize);
         HashDataPage page = pageStore.getPage(pageId);
-        int dataLen = page.getDataLen();
-        int nextPageId = page.getNextPage();
-        Data data = new Data(page.getData().getBytes());
-        data.setPos(HashDataPage.HeaderLength);
+        Data data = new Data(page.getData().getBytes(), HashDataPage.HeaderLength);
         data.setPos(offset + 4);   // skip hashCode
         int len = data.readInt();  // 读取数据长度
-        if (len < dataLen - data.getPos()) {  // 整个记录在一个页面，直接解析
+        if (len <= page.getDataLen() - data.getPos()) {  // 整个记录在一个页面，直接解析
             return parserBuffer(data, len);
         } else {  // 整个记录在多个页面，复制到缓冲区再解析
             Data buffer = SafeData.getData();
             buffer.reset();
             int leftLen = len;
             while (true) {
-                int copyLen = Math.min(leftLen, dataLen-data.getPos());
-                System.arraycopy(data.getBytes(), data.getPos(), buffer.getBytes(), buffer.getPos(), copyLen);
+                int copyLen = Math.min(leftLen, page.getDataLen()-data.getPos());
+                buffer.copyFrom(data, data.getPos(), copyLen);
                 leftLen -= copyLen;
                 if (leftLen == 0) {
                     break;
                 }
-                page = pageStore.getPage(nextPageId);
-                data = new Data(page.getData().getBytes());
-                data.setPos(HashDataPage.HeaderLength);
-                dataLen = page.getDataLen();
+                page = pageStore.getPage(page.getNextPage());
+                data = new Data(page.getData().getBytes(), HashDataPage.HeaderLength);
             }
             return parserBuffer(buffer, len);
         }
@@ -408,90 +402,49 @@ public class HashTable extends Table {
     public ArrayList<HashMap<String, Object>> findOrders(String goodId) {
         ArrayList<HashMap<String, Object>> results = new ArrayList<HashMap<String, Object>>();
         int hashCode = HashIndex.getHashCode(goodId);
-        int pageId = index.getBucketId(hashCode);
         PageStore pageStore = this.storeFiles.get(index.getFileIndex(hashCode));
-        HashDataPage page = pageStore.getPage(pageId);
-        Data data = new Data(page.getData().getBytes());
-        data.setPos(HashDataPage.HeaderLength);
-        pageId = page.getNextPage();
-        int dataLen = page.getDataLen();
+        int pageId = index.getBucketId(hashCode);
+        int readHash=0;
+        int readLen=0;
+        int dataLen = 0;
+        HashDataPage page;
+        Data data = new Data(new byte[1]);
+        Data buffer = SafeData.getData();
+        boolean nextRecord = true;
         while (true) {
-            int readHashCode = data.readInt();
-            int readLen = data.readInt();
-            if (data.getPos() + readLen <= dataLen) {  // 记录不跨页 处理记录
-                if (readHashCode == hashCode) {  // 解析记录
-                    String readKey = data.readString();
-                    if (readKey.equals(goodId)) {
-                        results.add(parserBuffer(data, readLen-readKey.length()-4, readKey));
-                    } else {
-                        data.skip(readLen-readKey.length()-4);
-                    }
-                } else {  // 跳过记录
-                    data.skip(readLen);
+            if (dataLen == data.getPos()) {
+                if(pageId == -1) {
+                    break;
                 }
-                if (data.getPos() == dataLen) { // 处理到了页面末尾
-                    if (pageId == -1) {  // 没有了更多的页面
-                        break;
-                    }
-                    // 切换到下一页
-                    page = pageStore.getPage(pageId);
-                    data = new Data(page.getData().getBytes());
-                    data.setPos(HashDataPage.HeaderLength);
-                    pageId = page.getNextPage();
-                    dataLen = page.getDataLen();
-                }
-            } else {  // 跨页面处理
-                int leftLen = readLen - (dataLen - data.getPos());  // 剩余长度
-                if (readHashCode != hashCode) {
-                    // 切换到下一条记录
-                    while (true) {
-                        page = pageStore.getPage(pageId);
-                        data = new Data(page.getData().getBytes(), HashDataPage.HeaderLength);
-                        pageId = page.getNextPage();
-                        dataLen = page.getDataLen();
-                        if (data.getPos() + leftLen < dataLen) {
-                            data.skip(leftLen);
-                            break;
-                        } else {
-                            leftLen -= (dataLen-HashDataPage.HeaderLength);
-                            if (leftLen == 0 && pageId == -1) {   // 跳出循环
-                                break;
-                            }
-                        }
-                    }
-                } else {
-                    // 读取完整记录 然后解析
-                    Data buffer = SafeData.getData();
-                    buffer.reset();
-                    buffer.copyFrom(data, data.getPos(), dataLen-data.getPos());
-                    while (true) {
-                        page = pageStore.getPage(pageId);
-                        data = new Data(page.getData().getBytes());
-                        data.setPos(HashDataPage.HeaderLength);
-                        pageId = page.getNextPage();
-                        dataLen = page.getDataLen();
-                        if (data.getPos() + leftLen < dataLen) {
-                            buffer.copyFrom(data, data.getPos(), leftLen);
-                            data.setPos(data.getPos()+leftLen);
-                            break;
-                        } else {
-                            buffer.copyFrom(data, data.getPos(), dataLen-data.getPos());
-                            leftLen -= (dataLen-data.getPos());
-                            if (leftLen == 0 && pageId == -1) {   // 正好整页面读取完毕
-                                break;
-                            }
-                        }
-                    }
+                page = pageStore.getPage(pageId);
+                data = new Data(page.getData().getBytes(), HashDataPage.HeaderLength);
+                dataLen = page.getDataLen();
+                pageId = page.getNextPage();
+            }
+            if (nextRecord) {
+                readHash = data.readInt();
+                readLen = data.readInt();
+                buffer.reset();
+            }
+            int copyLen = Math.min(readLen - buffer.getPos(), dataLen - data.getPos());
+            if (data.getPos()+copyLen > data.getLength()) {
+                throw new RuntimeException("超出数组长度");
+            }
+            buffer.copyFrom(data, data.getPos(), copyLen);
+            data.setPos(data.getPos()+copyLen);
+            if (readLen == buffer.getPos()) {
+                // 验证
+                if (hashCode == readHash) {
                     int bufferLen = buffer.getPos();
                     buffer.reset();
                     String readKey = buffer.readString();
-                    if (readKey.equals(goodId)) {  // 找到了记录
-                        results.add(parserBuffer(buffer, bufferLen-readKey.length()-4, readKey));
+                    if (readKey.equals(goodId)) {
+                        results.add(parserBuffer(buffer, bufferLen - readKey.length() - 4, readKey));
                     }
                 }
-                if (pageId == -1) {   // 跳出循环
-                    break;
-                }
+                nextRecord = true;
+            } else {
+                nextRecord = false;
             }
         }
         return results;
