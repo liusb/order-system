@@ -144,15 +144,21 @@ public class HashTable extends Table {
         Data data = new Data(page.getData().getBytes(), HashDataPage.HeaderLength);
         data.setPos(offset + 4);   // skip hashCode
         int len = data.readInt();  // 读取数据长度
+        int leftLen;
+        int copyLen;
+        if (len > 1024) {
+            System.out.println();
+        }
         if (len <= page.getDataLen() - data.getPos()) {  // 整个记录在一个页面，直接解析
             return parserBuffer(data, len);
         } else {  // 整个记录在多个页面，复制到缓冲区再解析
             Data buffer = SafeData.getData();
             buffer.reset();
-            int leftLen = len;
+            leftLen = len;
             while (true) {
-                int copyLen = Math.min(leftLen, page.getDataLen()-data.getPos());
+                copyLen = Math.min(leftLen, page.getDataLen()-data.getPos());
                 buffer.copyFrom(data, data.getPos(), copyLen);
+                data.skip(copyLen);
                 leftLen -= copyLen;
                 if (leftLen == 0) {
                     break;
@@ -160,6 +166,7 @@ public class HashTable extends Table {
                 page = pageStore.getPage(page.getNextPage());
                 data = new Data(page.getData().getBytes(), HashDataPage.HeaderLength);
             }
+            buffer.reset();  // 解析之前重置
             return parserBuffer(buffer, len);
         }
     }
