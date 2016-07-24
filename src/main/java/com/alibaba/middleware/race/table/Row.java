@@ -27,6 +27,9 @@ public class Row {
             } catch (NumberFormatException e) {
                 try {
                     value = Double.parseDouble(strValue);
+                    if (!strValue.equals(value.toString())) {  // 处理小数点后面有多余的0
+                        value = strValue;
+                    }
                 } catch (NumberFormatException e2) {
                     value = strValue;
                 }
