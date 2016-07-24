@@ -44,12 +44,31 @@ public class WorkerManager {
 
     public void run() {
         processGoodRecord();
+        System.out.println("========================");
         processBuyerRecord();
+        System.out.println("========================");
         processOrderRecord();
+        System.out.println("========================");
 
         OrderTable.getInstance().reopen();
         BuyerTable.getInstance().reopen();
         GoodTable.getInstance().reopen();
+
+        long totalCount = 0;
+        for (PageStore pageFile: GoodTable.getInstance().baseTable.getPageFiles()) {
+            totalCount += pageFile.FileCheck();
+        }
+        System.out.println("========================total Count:" + totalCount);
+        totalCount = 0;
+        for (PageStore pageFile: BuyerTable.getInstance().baseTable.getPageFiles()) {
+            totalCount += pageFile.FileCheck();
+        }
+        System.out.println("========================total Count:" + totalCount);
+        totalCount = 0;
+        for (PageStore pageFile: OrderTable.getInstance().baseTable.getPageFiles()) {
+            totalCount += pageFile.FileCheck();
+        }
+        System.out.println("========================total Count:" + totalCount);
     }
 
     private void processGoodRecord() {

@@ -1,9 +1,7 @@
 package com.alibaba.middleware.race.store;
 
-import com.alibaba.middleware.race.cache.Cache;
-import com.alibaba.middleware.race.cache.CacheLRU;
-import com.alibaba.middleware.race.cache.CacheObject;
-import com.alibaba.middleware.race.cache.CacheWriter;
+import com.alibaba.middleware.race.cache.*;
+import com.alibaba.middleware.race.index.HashIndex;
 
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -202,8 +200,61 @@ public class PageStore implements CacheWriter {
         if (writePos + pageSize < file.getLength()) {
             file.write(data.getBytes(), 0, dataLen);
         }else {
-            file.write(data.getBytes(), 0, data.getLength());
+            file.write(data.getBytes(), 0, pageSize);
         }
         page.setChanged(false);
     }
+
+
+
+    public long FileCheck() {
+        long recordCount = 0;
+        for (int i=0; i<this.bucketSize; i++) {
+            int pageId = i;
+            if (!usedSet.get(i)) {
+                continue;
+            }
+            int readHash=0;
+            int readLen=0;
+            int dataLen = 0;
+            HashDataPage page;
+            Data data = new Data(new byte[1]);
+            Data buffer = SafeData.getData();
+            boolean nextRecord = true;
+            while (true) {
+                if (dataLen == data.getPos()) {
+                    if(pageId == -1) {
+                        break;
+                    }
+                    page = getPage(pageId);
+                    data = page.getData();
+                    dataLen = page.getDataLen();
+                    pageId = page.getNextPage();
+                }
+                if (nextRecord) {
+                    readHash = data.readInt();
+                    readLen = data.readInt();
+                    buffer.reset();
+                    recordCount ++;
+                }
+                int copyLen = Math.min(readLen - buffer.getPos(), dataLen - data.getPos());
+                buffer.copyFrom(data, data.getPos(), copyLen);
+                data.setPos(data.getPos()+copyLen);
+                if (readLen == buffer.getPos()) {
+                    // 验证
+                    buffer.reset();
+                    String key = buffer.readString();
+                    if (readHash != HashIndex.getHashCode(key)) {
+                        throw new RuntimeException("数据错误");
+                    }
+                    nextRecord = true;
+                } else {
+                    nextRecord = false;
+                }
+            }
+        }
+        System.out.println("recordCount:" + recordCount);
+        return recordCount;
+    }
+
 }

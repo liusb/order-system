@@ -119,6 +119,6 @@ public class OrderWriter implements Runnable {
 //            }
         }
         this.pageFile.close();
-        System.out.println("INFO: Writer thread completed. inCount:" + inCount + " Thread id:" + threadId);
+        System.out.println("INFO: OrderWriter thread completed. inCount:" + inCount + " Thread id:" + threadId);
     }
 }
