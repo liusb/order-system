@@ -92,6 +92,14 @@ public class WorkerManager {
         for (Writer writer: writers) {
             writerThreads.add(new Thread(writer));
         }
+
+        Metric metric = new Metric();
+        addQueueToMetric(metric, "GoodRecord inQueue ", inQueues);
+        addQueueToMetric(metric, "GoodRecord outQueue ", outQueues);
+        metric.setSleepMills(100);
+        Thread metricThread = new Thread(metric);
+        metricThread.start();
+
         startThreads(readerThreads);
         startThreads(parserThreads);
         startThreads(writerThreads);
@@ -102,6 +110,8 @@ public class WorkerManager {
 
         sendEndMsg(outQueues, emptyRow);
         waitThreads(writerThreads);
+
+        metric.setStop();
     }
 
     private void processBuyerRecord() {
@@ -124,6 +134,14 @@ public class WorkerManager {
         for (Writer writer: writers) {
             writerThreads.add(new Thread(writer));
         }
+
+        Metric metric = new Metric();
+        addQueueToMetric(metric, "BuyerRecord inQueue ", inQueues);
+        addQueueToMetric(metric, "BuyerRecord outQueue ", outQueues);
+        metric.setSleepMills(100);
+        Thread metricThread = new Thread(metric);
+        metricThread.start();
+
         startThreads(readerThreads);
         startThreads(parserThreads);
         startThreads(writerThreads);
@@ -134,6 +152,8 @@ public class WorkerManager {
 
         sendEndMsg(outQueues, emptyRow);
         waitThreads(writerThreads);
+
+        metric.setStop();
     }
 
     private void processOrderRecord() {
@@ -177,6 +197,17 @@ public class WorkerManager {
         for (IndexWriter writer: buyerIndexWriters) {
             buyerIndexWriterThreads.add(new Thread(writer));
         }
+
+        Metric metric = new Metric();
+        addQueueToMetric(metric, "OrderRecord inQueue ", inQueues);
+        addQueueToMetric(metric, "OrderRecord outQueue ", outQueues);
+        addQueueToMetric(metric, "OrderIndex queue ", orderIndexQueues);
+        addQueueToMetric(metric, "Buyer index queue ", buyerIndexQueues);
+        metric.setSleepMills(500);
+        Thread metricThread = new Thread(metric);
+        metricThread.start();
+
+
         startThreads(readerThreads);
         startThreads(parserThreads);
         startThreads(orderWriterThreads);
@@ -196,6 +227,7 @@ public class WorkerManager {
         sendEndMsg(buyerIndexQueues, emptyBuyerIdRowIndex);
         waitThreads(buyerIndexWriterThreads);
 
+        metric.setStop();
     }
 
     private void startThreads(ArrayList<Thread> workers) {
@@ -286,5 +318,13 @@ public class WorkerManager {
             writers.add(new IndexWriter<T>(outQueues.get(i), pageFiles.get(i), index));
         }
         return writers;
+    }
+
+    private static <T> void addQueueToMetric(Metric metric, String name, ArrayList<LinkedBlockingQueue<T>> queues) {
+        ArrayList<LinkedBlockingQueue>  addQueues = new ArrayList<LinkedBlockingQueue>();
+        for (LinkedBlockingQueue queue: queues) {
+            addQueues.add(queue);
+        }
+        metric.addQueue(name, addQueues);
     }
 }
