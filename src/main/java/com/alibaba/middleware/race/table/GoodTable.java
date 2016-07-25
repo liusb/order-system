@@ -14,11 +14,11 @@ public class GoodTable {
     private GoodTable() { }
 
     // 哈希桶的总个数
-    private static final int TABLE_BUCKET_SIZE = 512;//256;
+    private static final int TABLE_BUCKET_SIZE = 256*(1<<10);
     // 建立表示很LRU缓存的大小
-    private static final int TABLE_CACHE_SIZE = 512;//128;
+    private static final int TABLE_CACHE_SIZE = 256*(1<<10);
     // 每页的大小，单位为byte
-    private static final int TABLE_PAGE_SIZE = 1*(1<<10);
+    private static final int TABLE_PAGE_SIZE = 4*(1<<10);
     private static final String[] TABLE_COLUMNS = {"goodid"};
     public HashTable baseTable;
 
@@ -32,7 +32,7 @@ public class GoodTable {
 
     // 在构造完，准备查询前重新打开，以只读方式打开，缓存为只读，
     public void reopen() {
-        this.baseTable.reopen(32);
+        this.baseTable.reopen(4*(1<<10));
     }
 
     public HashMap<String, Object> find(String goodId, TreeMap<Integer, String> keys) {
