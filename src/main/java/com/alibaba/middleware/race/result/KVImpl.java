@@ -63,6 +63,6 @@ public class KVImpl implements OrderSystem.KeyValue {
 
     @Override
     public String toString() {
-        return "[" + this.key + "]:" + this.value;
+        return  this.key + ":" + this.value;
     }
 }

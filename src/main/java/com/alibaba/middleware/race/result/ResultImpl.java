@@ -50,14 +50,14 @@ public class ResultImpl implements OrderSystem.Result, Comparable<ResultImpl> {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("orderid: " + orderId + " {");
+        sb.append("{orderid:" + orderId + ", KV:[");
         if (keyValue != null && !keyValue.isEmpty()) {
             for (KVImpl field : keyValue.values()) {
                 sb.append(field.toString());
-                sb.append(",\n");
+                sb.append(",");
             }
         }
-        sb.append('}');
+        sb.append("]}");
         return sb.toString();
     }
 }
