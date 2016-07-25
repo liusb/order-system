@@ -2,6 +2,7 @@ package com.alibaba.middleware.race.worker;
 
 import java.util.ArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 public class Reader implements Runnable {
     private ArrayList<LinkedBlockingQueue<String>> outs;
@@ -25,9 +26,15 @@ public class Reader implements Runnable {
         while (line != null) {
             while (true) {
                 try {
-                    outs.get((int)lineCount%outSize).put(line);
+                    outs.get((int)lineCount%outSize).offer(line, 1, TimeUnit.MICROSECONDS);
                     break;
                 } catch (InterruptedException e) {
+                    try {
+                        outs.get((int)(lineCount+threadId)%outSize).put(line);
+                        break;
+                    } catch (InterruptedException e2) {
+                        e2.printStackTrace();
+                    }
                     e.printStackTrace();
                 }
             }
