@@ -5,6 +5,7 @@ import com.alibaba.middleware.race.table.HashTable;
 import com.alibaba.middleware.race.table.Row;
 
 import java.util.ArrayList;
+import java.util.StringTokenizer;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class Parser implements Runnable {
@@ -35,21 +36,34 @@ public class Parser implements Runnable {
     }
 
     private Row parseRow(String line) {
-        String[] kvs = line.split("\t");
+        StringTokenizer tokenizer = new StringTokenizer(line, ":\t");
         Row row = new Row();
-        for (String rawkv : kvs) {
-            int p = rawkv.indexOf(':');
-            String key = rawkv.substring(0, p);
-            String value = rawkv.substring(p + 1);
-            if (key.length() == 0 || value.length() == 0) {
-                throw new RuntimeException("Bad data:" + line);
-            }
+        String key;
+        String value;
+        while (tokenizer.hasMoreTokens()) {
+            key = tokenizer.nextToken();
+            value = tokenizer.nextToken();
             int columnId = this.table.getColumnId(key);
             row.insert(columnId, value);
             if (columnId == 0) {
                 row.setHashCode(HashIndex.getHashCode(value));
             }
         }
+//        String[] kvs = line.split("\t");
+//        Row row = new Row();
+//        for (String rawkv : kvs) {
+//            int p = rawkv.indexOf(':');
+//            String key = rawkv.substring(0, p);
+//            String value = rawkv.substring(p + 1);
+//            if (key.length() == 0 || value.length() == 0) {
+//                throw new RuntimeException("Bad data:" + line);
+//            }
+//            int columnId = this.table.getColumnId(key);
+//            row.insert(columnId, value);
+//            if (columnId == 0) {
+//                row.setHashCode(HashIndex.getHashCode(value));
+//            }
+//        }
         return row;
     }
 
