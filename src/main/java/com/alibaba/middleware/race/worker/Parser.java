@@ -76,15 +76,15 @@ public class Parser implements Runnable {
             if(line.isEmpty()) {
                 break;
             }
-            Row row = parseRow(line);
-            while (true) {
-                try {
-                    outs.get(getOutIndex(row)).put(row);
-                    break;
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
+//            Row row = parseRow(line);
+//            while (true) {
+//                try {
+//                    outs.get(getOutIndex(row)).put(row);
+//                    break;
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+//            }
             rowCount ++;
 //            if(rowCount % 30 == 0) {
 //                System.out.println("INFO: Parser count is:" + rowCount + ". Thread id:" + threadId);
