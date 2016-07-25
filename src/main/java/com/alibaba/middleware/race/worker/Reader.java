@@ -26,15 +26,11 @@ public class Reader implements Runnable {
         while (line != null) {
             while (true) {
                 try {
-                    outs.get((int)lineCount%outSize).offer(line, 1, TimeUnit.MICROSECONDS);
+                    if (!outs.get((int)lineCount%outSize).offer(line, 1, TimeUnit.MICROSECONDS)) {
+                        outs.get((int) (lineCount + threadId) % outSize).put(line);
+                    }
                     break;
                 } catch (InterruptedException e) {
-                    try {
-                        outs.get((int)(lineCount+threadId)%outSize).put(line);
-                        break;
-                    } catch (InterruptedException e2) {
-                        e2.printStackTrace();
-                    }
                     e.printStackTrace();
                 }
             }
