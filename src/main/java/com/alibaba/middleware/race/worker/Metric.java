@@ -33,8 +33,14 @@ public class Metric implements Runnable {
 
     @Override
     public void run() {
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        long beginTime = System.currentTimeMillis();
         while (!this.stop) {
-            System.out.println(System.currentTimeMillis());
+            System.out.println("Metric run Millis ====>" + (System.currentTimeMillis()-beginTime));
             for (Map.Entry<String,LinkedBlockingQueue> entry : queues.entrySet()) {
                 System.out.println(entry.getKey() + " size===>: " + entry.getValue().size());
             }
