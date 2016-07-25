@@ -26,6 +26,12 @@ public class KVImpl implements OrderSystem.KeyValue {
     public long valueAsLong() throws OrderSystem.TypeException {
         if (value instanceof Long) {
             return ((Long) value);
+        } else if (value instanceof String) {
+            try {
+                return Long.parseLong(((String) value));
+            } catch (NumberFormatException e) {
+                throw new OrderSystem.TypeException();
+            }
         } else {
             throw new OrderSystem.TypeException();
         }
@@ -35,7 +41,13 @@ public class KVImpl implements OrderSystem.KeyValue {
     public double valueAsDouble() throws OrderSystem.TypeException {
         if (value instanceof Double) {
             return ((Double) value);
-        } else {
+        } else if (value instanceof String) {
+            try {
+                return Double.parseDouble(((String) value));
+            } catch (NumberFormatException e) {
+                throw new OrderSystem.TypeException();
+            }
+        }else {
             throw new OrderSystem.TypeException();
         }
     }
