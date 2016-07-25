@@ -24,7 +24,7 @@ public class LocalTest {
         os.construct(orderFiles, buyerFiles, goodFiles, storeFolders);
 
         // 检查构建是否有错误
-        SysteCheck.systemCheck(orderFiles, buyerFiles, goodFiles, os);
+        SystemCheck.systemCheck(orderFiles, buyerFiles, goodFiles, os);
 
         // 用例
         long orderid = 2982388;
