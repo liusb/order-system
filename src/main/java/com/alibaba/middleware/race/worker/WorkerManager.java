@@ -43,12 +43,13 @@ public class WorkerManager {
     }
 
     public void run() {
+        long beginTime = System.currentTimeMillis();
         processGoodRecord();
-        System.out.println("========================");
+        System.out.println("Good Time ====>" + (System.currentTimeMillis() - beginTime));
         processBuyerRecord();
-        System.out.println("========================");
+        System.out.println("Buyer Time =====>" + (System.currentTimeMillis() - beginTime));
         processOrderRecord();
-        System.out.println("========================");
+        System.out.println("Order Time =====>" + (System.currentTimeMillis() - beginTime));
 
         OrderTable.getInstance().reopen();
         BuyerTable.getInstance().reopen();
