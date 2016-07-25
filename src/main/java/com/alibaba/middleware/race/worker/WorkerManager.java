@@ -76,7 +76,7 @@ public class WorkerManager {
         GoodTable table = GoodTable.getInstance();
         table.init(this.storeFolders);
         ArrayList<LinkedBlockingQueue<String>> inQueues = createQueues(PARSER_THREAD_NUM, QUEUE_SIZE);
-        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(this.storeFolders.size(), QUEUE_SIZE);
+        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(table.baseTable.getPageFiles().size(), QUEUE_SIZE);
         ArrayList<Reader> readers = createReaders(goodFiles, inQueues);
         ArrayList<Parser> parsers = createParser(inQueues, outQueues, table.baseTable);
         ArrayList<Writer> writers = createWriter(outQueues, table.baseTable);
@@ -118,7 +118,7 @@ public class WorkerManager {
         BuyerTable table = BuyerTable.getInstance();
         table.init(this.storeFolders);
         ArrayList<LinkedBlockingQueue<String>> inQueues = createQueues(PARSER_THREAD_NUM, QUEUE_SIZE);
-        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(this.storeFolders.size(), QUEUE_SIZE);
+        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(table.baseTable.getPageFiles().size(), QUEUE_SIZE);
         ArrayList<Reader> readers = createReaders(buyerFiles, inQueues);
         ArrayList<Parser> parsers = createParser(inQueues, outQueues, table.baseTable);
         ArrayList<Writer> writers = createWriter(outQueues, table.baseTable);
