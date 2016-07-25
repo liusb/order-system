@@ -9,12 +9,14 @@ import com.alibaba.middleware.race.table.*;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class WorkerManager {
 
-    private static final int PARSER_THREAD_NUM = 24;
-    private static final int QUEUE_SIZE = 64;
+    private static final int PARSER_THREAD_NUM = 18;
+    private static final int QUEUE_SIZE = 32;
 
     private Collection<String> storeFolders;
     private Collection<String> orderFiles;
@@ -96,7 +98,7 @@ public class WorkerManager {
         Metric metric = new Metric();
         addQueueToMetric(metric, "GoodRecord inQueue ", inQueues);
         addQueueToMetric(metric, "GoodRecord outQueue ", outQueues);
-        metric.setSleepMills(80);
+        metric.setSleepMills(60000);
         Thread metricThread = new Thread(metric);
         metricThread.start();
 
@@ -138,7 +140,7 @@ public class WorkerManager {
         Metric metric = new Metric();
         addQueueToMetric(metric, "BuyerRecord inQueue ", inQueues);
         addQueueToMetric(metric, "BuyerRecord outQueue ", outQueues);
-        metric.setSleepMills(80);
+        metric.setSleepMills(60000);
         Thread metricThread = new Thread(metric);
         metricThread.start();
 
@@ -203,7 +205,7 @@ public class WorkerManager {
         addQueueToMetric(metric, "OrderRecord outQueue ", outQueues);
         addQueueToMetric(metric, "OrderIndex queue ", orderIndexQueues);
         addQueueToMetric(metric, "Buyer index queue ", buyerIndexQueues);
-        metric.setSleepMills(300);
+        metric.setSleepMills(800);
         Thread metricThread = new Thread(metric);
         metricThread.start();
 
@@ -269,9 +271,17 @@ public class WorkerManager {
 
     private static ArrayList<Reader> createReaders(Collection<String> files,
                                                    ArrayList<LinkedBlockingQueue<String>> inQueues) {
-        ArrayList<Reader> readers = new ArrayList<Reader>();
+        HashMap<String, ArrayList<String>> fileSplits = new HashMap<String, ArrayList<String>>(3);
         for (String file: files) {
-            readers.add(new Reader(file, inQueues));
+            String prefix = file.substring(0, file.lastIndexOf('/'));
+            if (!fileSplits.containsKey(prefix)) {
+                fileSplits.put(prefix, new ArrayList<String>());
+            }
+            fileSplits.get(prefix).add(file);
+        }
+        ArrayList<Reader> readers = new ArrayList<Reader>();
+        for (Map.Entry<String, ArrayList<String>> entry: fileSplits.entrySet()) {
+            readers.add(new Reader(entry.getValue(), inQueues));
         }
         return readers;
     }
