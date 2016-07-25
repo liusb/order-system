@@ -27,15 +27,12 @@ public class HashTable extends Table {
 
     public void init(Collection<String> storeFolders, int bucketSize,
                      int cacheSize, int pageSize) {
-        int dbCount = 2;
         for (String folder: storeFolders) {
-            for(int i=0; i<dbCount; i++) {
-                PageStore pageStore = new PageStore(folder + "/" + this.name + i + ".db",
-                        bucketSize, pageSize);
-                pageStore.open("rw", cacheSize);
-                this.pageSize = pageSize;
-                this.storeFiles.add(pageStore);
-            }
+            PageStore pageStore = new PageStore(folder + "/" + this.name + ".db",
+                    bucketSize, pageSize);
+            pageStore.open("rw", cacheSize);
+            this.pageSize = pageSize;
+            this.storeFiles.add(pageStore);
         }
         this.index = new HashIndex(bucketSize, this.storeFiles.size());
     }
