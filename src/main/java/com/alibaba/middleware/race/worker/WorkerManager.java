@@ -14,7 +14,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class WorkerManager {
 
     private static final int PARSER_THREAD_NUM = 16;
-    private static final int QUEUE_SIZE = 32;
+    private static final int QUEUE_SIZE = 64;
 
     private Collection<String> storeFolders;
     private Collection<String> orderFiles;
@@ -96,7 +96,7 @@ public class WorkerManager {
         Metric metric = new Metric();
         addQueueToMetric(metric, "GoodRecord inQueue ", inQueues);
         addQueueToMetric(metric, "GoodRecord outQueue ", outQueues);
-        metric.setSleepMills(100);
+        metric.setSleepMills(80);
         Thread metricThread = new Thread(metric);
         metricThread.start();
 
@@ -138,7 +138,7 @@ public class WorkerManager {
         Metric metric = new Metric();
         addQueueToMetric(metric, "BuyerRecord inQueue ", inQueues);
         addQueueToMetric(metric, "BuyerRecord outQueue ", outQueues);
-        metric.setSleepMills(100);
+        metric.setSleepMills(80);
         Thread metricThread = new Thread(metric);
         metricThread.start();
 
@@ -203,7 +203,7 @@ public class WorkerManager {
         addQueueToMetric(metric, "OrderRecord outQueue ", outQueues);
         addQueueToMetric(metric, "OrderIndex queue ", orderIndexQueues);
         addQueueToMetric(metric, "Buyer index queue ", buyerIndexQueues);
-        metric.setSleepMills(500);
+        metric.setSleepMills(300);
         Thread metricThread = new Thread(metric);
         metricThread.start();
 
