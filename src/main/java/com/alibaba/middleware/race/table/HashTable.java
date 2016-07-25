@@ -72,6 +72,9 @@ public class HashTable extends Table {
         int hashCode = HashIndex.getHashCode(buyerId);
         PageStore pageStore = storeFiles.get(index.getFileIndex(hashCode));
         int bucketIndex = index.getBucketId(hashCode);
+        if (!pageStore.isBucketUsed(bucketIndex)) {
+            return results;
+        }
         int readHashCode;
         String readString;
         long readTime;
@@ -114,6 +117,9 @@ public class HashTable extends Table {
         int hashCode = HashIndex.getHashCode(orderId);
         PageStore pageStore = storeFiles.get(index.getFileIndex(hashCode));
         int bucketIndex = index.getBucketId(hashCode);
+        if (!pageStore.isBucketUsed(bucketIndex)) {
+            return null;
+        }
         HashDataPage page;
         Data data;
         long readOrderId;
@@ -184,7 +190,7 @@ public class HashTable extends Table {
         HashMap<String, Object> result = new HashMap<String, Object>();
         result.put(this.columnsMap[0], recordKey);
         int oldPos = data.getPos();
-        while (data.getPos() - oldPos != len) {  // todo 如果条件一直不成立，则说明有bug
+        while (data.getPos() - oldPos < len) {
             String key = this.columnsMap[data.readInt()];
             byte type = data.readByte();
             Object value;
@@ -213,6 +219,9 @@ public class HashTable extends Table {
         int hashCode = HashIndex.getHashCode(key);
         PageStore pageStore = this.storeFiles.get(index.getFileIndex(hashCode));
         int pageId = index.getBucketId(hashCode);
+        if (!pageStore.isBucketUsed(pageId)) {
+            return null;
+        }
         int readHash=0;
         int readLen=0;
         int dataLen = 0;
@@ -277,16 +286,9 @@ public class HashTable extends Table {
 //                data = new Data(page.getData().getBytes(), HashDataPage.HeaderLength);
 //            }
 //            if (needProcessLen == 0) {  // 已经处理完一条记录，需要处理下一条记录
-//                int oldHash = readHashCode;
 //                readHashCode = data.readInt();
 //                needProcessLen = data.readInt();
-//                if (needProcessLen > 1280000) {
-//                    throw new RuntimeException("完全不合理");
-//                }
 //                buffer.reset();
-//            }
-//            if (readHashCode == 687769234) {
-//                System.out.println();
 //            }
 //            int processLen = Math.min(needProcessLen, page.getDataLen() - data.getPos());
 //            needProcessLen -= processLen;
@@ -316,7 +318,6 @@ public class HashTable extends Table {
 //        }
 //        return null;
 //    }
-
 
 //    public HashMap<String, Object> findRecord(String key) {
 //        int hashCode = HashIndex.getHashCode(key);
@@ -414,6 +415,9 @@ public class HashTable extends Table {
         int hashCode = HashIndex.getHashCode(goodId);
         PageStore pageStore = this.storeFiles.get(index.getFileIndex(hashCode));
         int pageId = index.getBucketId(hashCode);
+        if (!pageStore.isBucketUsed(pageId)) {
+            return null;
+        }
         int readHash=0;
         int readLen=0;
         int dataLen = 0;

@@ -72,6 +72,9 @@ public class PageStore implements CacheWriter {
     }
 
 
+    public boolean isBucketUsed(int bucketId) {
+        return this.usedSet.get(bucketId);
+    }
 
     // 此方法为写入用
     private HashDataPage loadBucketPage(int pageId) {
