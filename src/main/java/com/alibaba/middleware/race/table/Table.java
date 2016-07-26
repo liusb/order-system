@@ -30,6 +30,10 @@ public abstract class Table {
         }
     }
 
+    public Integer findColumnId(String name) {
+        return this.columns.get(name);
+    }
+
     public ArrayList<PageStore> getPageFiles() {
         return this.storeFiles;
     }
