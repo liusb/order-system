@@ -163,7 +163,6 @@ public class WorkerManager implements Runnable {
     private void processOrderRecord() {
         OrderTable table = OrderTable.getInstance();
         table.init(storeFolders);
-        HashIndex baseIndex = table.baseTable.getIndex();
         HashIndex orderIndexIndex = table.orderIndex.getIndex();
         HashIndex buyerIndexIndex = table.buyerCreateTimeIndex.getIndex();
         ArrayList<LinkedBlockingQueue<String>> inQueues = createQueues(PARSER_THREAD_NUM, QUEUE_SIZE);
