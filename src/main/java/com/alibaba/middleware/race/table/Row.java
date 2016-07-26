@@ -102,21 +102,21 @@ public class Row {
         for (Map.Entry<Integer, Object> entry: values.entrySet()) {
             buffer.writeInt(entry.getKey());
             value = entry.getValue();
-            if (value instanceof Boolean) {
+            if (value instanceof String) {
+                buffer.writeByte(Value.STRING);
+                buffer.writeString(((String) value));
+            } else if (value instanceof Double) {
+                buffer.writeByte(Value.DOUBLE);
+                buffer.writeDouble((Double) value);
+            } else if (value instanceof Long) {
+                buffer.writeByte(Value.LONG);
+                buffer.writeLong((Long) value);
+            } else if (value instanceof Boolean) {
                 if (((Boolean) value)) {
                     buffer.writeByte(Value.BOOLEAN_TRUE);
                 } else {
                     buffer.writeByte(Value.BOOLEAN_FALSE);
                 }
-            } else if (value instanceof Long) {
-                buffer.writeByte(Value.LONG);
-                buffer.writeLong((Long) value);
-            } else if (value instanceof Double) {
-                buffer.writeByte(Value.DOUBLE);
-                buffer.writeDouble((Double) value);
-            } else {
-                buffer.writeByte(Value.STRING);
-                buffer.writeString(((String) value));
             }
         }
         buffer.setInt(4, buffer.getPos()-8);
