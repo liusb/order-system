@@ -22,23 +22,53 @@ public class Row {
         }else if(strValue.equals(ValueBoolean.booleanTrueValue)) {
             value = true;
         } else {
-            try {
-                value = Long.parseLong(strValue);
-                if (!strValue.equals(value.toString())) {  // 处理小数点后面有多余的0
-                    value = strValue;
+            value = parseValue(strValue);
+        }
+        this.values.put(key, value);
+    }
+
+    public void insert(int key, Long value) {
+        this.values.put(key, value);
+    }
+
+    public Object parseValue(String s) {
+        if (s.length() > 20) {
+            return s;
+        }
+        char firstChar = s.charAt(0);
+        if (firstChar == '+') {  // 会丢失加号, 直接不转换
+            return s;
+//            try {
+//                return Long.parseLong(s);
+//            } catch (NumberFormatException e) {
+//                return s;
+//            }
+        }
+        if (firstChar == '-' && s.length()>1) {
+            firstChar = s.charAt(1);
+        }
+        if (firstChar >= '0' && firstChar <='9') {
+            if (s.indexOf(' ') != -1) {
+                return s;
+            }
+            if (s.indexOf('.') != -1) {
+                if (s.lastIndexOf('0') == s.length()-1) {
+                    return s;
                 }
-            } catch (NumberFormatException e) {
                 try {
-                    value = Double.parseDouble(strValue);
-                    if (!strValue.equals(value.toString())) {  // 处理小数点后面有多余的0
-                        value = strValue;
-                    }
+                    return Double.parseDouble(s);
                 } catch (NumberFormatException e2) {
-                    value = strValue;
+                    return s;
+                }
+            } else {
+                try {
+                    return Long.parseLong(s);
+                } catch (NumberFormatException e) {
+                    return s;
                 }
             }
         }
-        this.values.put(key, value);
+        return s;
     }
 
     public void setHashCode(int hashCode) {
