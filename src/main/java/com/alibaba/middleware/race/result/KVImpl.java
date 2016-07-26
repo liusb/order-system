@@ -41,6 +41,8 @@ public class KVImpl implements OrderSystem.KeyValue {
     public double valueAsDouble() throws OrderSystem.TypeException {
         if (value instanceof Double) {
             return ((Double) value);
+        } if (value instanceof Long) {
+            return ((Long) value).doubleValue();
         } else if (value instanceof String) {
             try {
                 return Double.parseDouble(((String) value));
