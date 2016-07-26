@@ -13,10 +13,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class WorkerManager {
+public class WorkerManager implements Runnable {
 
     private static final int PARSER_THREAD_NUM = 18;
     private static final int QUEUE_SIZE = 32;
+    private static final int MetricTime = 10000;
 
     private Collection<String> storeFolders;
     private Collection<String> orderFiles;
@@ -44,6 +45,7 @@ public class WorkerManager {
         this.goodFiles = goodFiles;
     }
 
+    @Override
     public void run() {
         long beginTime = System.currentTimeMillis();
         processGoodRecord();
@@ -53,9 +55,9 @@ public class WorkerManager {
         processOrderRecord();
         System.out.println("Order Time =====>" + (System.currentTimeMillis() - beginTime));
 
-        OrderTable.getInstance().reopen();
         BuyerTable.getInstance().reopen();
         GoodTable.getInstance().reopen();
+        OrderTable.getInstance().reopen();
 
 //        long totalCount = 0;
 //        for (PageStore pageFile: GoodTable.getInstance().baseTable.getPageFiles()) {
@@ -96,9 +98,9 @@ public class WorkerManager {
         }
 
         Metric metric = new Metric();
-        addQueueToMetric(metric, "GoodRecord inQueue ", inQueues);
-        addQueueToMetric(metric, "GoodRecord outQueue ", outQueues);
-        metric.setSleepMills(60000);
+        addQueueToMetric(metric, "Good inQueue ", inQueues);
+        addQueueToMetric(metric, "Good outQueue ", outQueues);
+        metric.setSleepMills(MetricTime);
         Thread metricThread = new Thread(metric);
         metricThread.start();
 
@@ -138,9 +140,9 @@ public class WorkerManager {
         }
 
         Metric metric = new Metric();
-        addQueueToMetric(metric, "BuyerRecord inQueue ", inQueues);
-        addQueueToMetric(metric, "BuyerRecord outQueue ", outQueues);
-        metric.setSleepMills(60000);
+        addQueueToMetric(metric, "Buyer inQueue ", inQueues);
+        addQueueToMetric(metric, "Buyer outQueue ", outQueues);
+        metric.setSleepMills(MetricTime);
         Thread metricThread = new Thread(metric);
         metricThread.start();
 
@@ -201,11 +203,11 @@ public class WorkerManager {
         }
 
         Metric metric = new Metric();
-        addQueueToMetric(metric, "OrderRecord inQueue ", inQueues);
-        addQueueToMetric(metric, "OrderRecord outQueue ", outQueues);
+        addQueueToMetric(metric, "Order inQueue ", inQueues);
+        addQueueToMetric(metric, "Order outQueue ", outQueues);
         addQueueToMetric(metric, "OrderIndex queue ", orderIndexQueues);
-        addQueueToMetric(metric, "Buyer index queue ", buyerIndexQueues);
-        metric.setSleepMills(800);
+        addQueueToMetric(metric, "BuyerIndex queue ", buyerIndexQueues);
+        metric.setSleepMills(MetricTime*6);
         Thread metricThread = new Thread(metric);
         metricThread.start();
 
