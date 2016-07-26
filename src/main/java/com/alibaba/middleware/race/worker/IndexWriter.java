@@ -45,7 +45,6 @@ public class IndexWriter<T extends RowIndex> implements Runnable {
     @Override
     public void run() {
         this.threadId = Thread.currentThread().getId();
-//        System.out.println("INFO: Writer thread is running. Thread id:" + threadId);
         while (true) {
             this.nextRow();
             if(row.isEmpty()) {
@@ -55,9 +54,6 @@ public class IndexWriter<T extends RowIndex> implements Runnable {
             int bucketId = index.getBucketId(row.getHashCode());
             pageFile.insertIndexData(bucketId, buffer);
             inCount++;
-//            if(inCount % 30 == 0) {
-//                System.out.println("INFO: Writer count is:" + inCount + ". Thread id:" + threadId);
-//            }
         }
         this.pageFile.close();
         System.out.println("INFO: Writer thread completed. inCount:" + inCount + " Thread id:" + threadId);

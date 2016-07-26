@@ -1,5 +1,6 @@
 package com.alibaba.middleware.race.worker;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -23,29 +24,29 @@ public class Reader implements Runnable {
     @Override
     public void run() {
         this.threadId = Thread.currentThread().getId();
-//        System.out.println("INFO: Reader thread is running. Thread id:" + threadId);
-        for (String file: this.files) {
-            in = new LineReader(file);
-            String line = in.nextLine();
-            while (line != null) {
-                while (true) {
-                    try {
-                        if (!outs.get((int) lineCount % outSize).offer(line, 1, TimeUnit.MICROSECONDS)) {
-                            outs.get((int) (lineCount + threadId) % outSize).put(line);
+        try {
+            for (String file : this.files) {
+                in = new LineReader(file);
+                String line = in.readLine();
+                while (line != null) {
+                    while (true) {
+                        try {
+                            if (!outs.get((int) lineCount % outSize).offer(line, 1, TimeUnit.MICROSECONDS)) {
+                                outs.get((int) (lineCount + threadId) % outSize).put(line);
+                            }
+                            break;
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
                         }
-                        break;
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
                     }
+                    line = in.readLine();
+                    lineCount++;
                 }
-                line = in.nextLine();
-                lineCount++;
-//            if(lineCount % 30 == 0) {
-//                System.out.println("INFO: Reader count is:" + lineCount  + ". Thread id:" + threadId);
-//            }
+                in.close();
             }
-            in.close();
+            System.out.println("INFO: Reader thread completed. lineCount:" + lineCount + " Thread id:" + threadId);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        System.out.println("INFO: Reader thread completed. lineCount:" + lineCount + " Thread id:" + threadId);
     }
 }

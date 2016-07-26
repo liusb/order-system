@@ -15,8 +15,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class WorkerManager implements Runnable {
 
-    private static final int PARSER_THREAD_NUM = 18;
-    private static final int QUEUE_SIZE = 32;
+    private static final int PARSER_THREAD_NUM = 24;
+    private static final int IN_QUEUE_SIZE = 32;
+    private static final int OUT_QUEUE_SIZE = 64;
     private static final int MetricTime = 10000;
 
     private Collection<String> storeFolders;
@@ -58,29 +59,13 @@ public class WorkerManager implements Runnable {
         BuyerTable.getInstance().reopen();
         GoodTable.getInstance().reopen();
         OrderTable.getInstance().reopen();
-
-//        long totalCount = 0;
-//        for (PageStore pageFile: GoodTable.getInstance().baseTable.getPageFiles()) {
-//            totalCount += pageFile.FileCheck();
-//        }
-//        System.out.println("========================total Count:" + totalCount);
-//        totalCount = 0;
-//        for (PageStore pageFile: BuyerTable.getInstance().baseTable.getPageFiles()) {
-//            totalCount += pageFile.FileCheck();
-//        }
-//        System.out.println("========================total Count:" + totalCount);
-//        totalCount = 0;
-//        for (PageStore pageFile: OrderTable.getInstance().baseTable.getPageFiles()) {
-//            totalCount += pageFile.FileCheck();
-//        }
-//        System.out.println("========================total Count:" + totalCount);
     }
 
     private void processGoodRecord() {
         GoodTable table = GoodTable.getInstance();
         table.init(this.storeFolders);
-        ArrayList<LinkedBlockingQueue<String>> inQueues = createQueues(PARSER_THREAD_NUM, QUEUE_SIZE);
-        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(table.baseTable.getPageFiles().size(), QUEUE_SIZE);
+        ArrayList<LinkedBlockingQueue<String>> inQueues = createQueues(PARSER_THREAD_NUM, IN_QUEUE_SIZE);
+        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(table.baseTable.getPageFiles().size(), OUT_QUEUE_SIZE);
         ArrayList<Reader> readers = createReaders(goodFiles, inQueues);
         ArrayList<Parser> parsers = createParser(inQueues, outQueues, table.baseTable);
         ArrayList<Writer> writers = createWriter(outQueues, table.baseTable);
@@ -121,8 +106,8 @@ public class WorkerManager implements Runnable {
     private void processBuyerRecord() {
         BuyerTable table = BuyerTable.getInstance();
         table.init(this.storeFolders);
-        ArrayList<LinkedBlockingQueue<String>> inQueues = createQueues(PARSER_THREAD_NUM, QUEUE_SIZE);
-        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(table.baseTable.getPageFiles().size(), QUEUE_SIZE);
+        ArrayList<LinkedBlockingQueue<String>> inQueues = createQueues(PARSER_THREAD_NUM, IN_QUEUE_SIZE);
+        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(table.baseTable.getPageFiles().size(), OUT_QUEUE_SIZE);
         ArrayList<Reader> readers = createReaders(buyerFiles, inQueues);
         ArrayList<Parser> parsers = createParser(inQueues, outQueues, table.baseTable);
         ArrayList<Writer> writers = createWriter(outQueues, table.baseTable);
@@ -165,12 +150,12 @@ public class WorkerManager implements Runnable {
         table.init(storeFolders);
         HashIndex orderIndexIndex = table.orderIndex.getIndex();
         HashIndex buyerIndexIndex = table.buyerCreateTimeIndex.getIndex();
-        ArrayList<LinkedBlockingQueue<String>> inQueues = createQueues(PARSER_THREAD_NUM, QUEUE_SIZE);
-        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(table.baseTable.getPageFiles().size(), QUEUE_SIZE);
+        ArrayList<LinkedBlockingQueue<String>> inQueues = createQueues(PARSER_THREAD_NUM, IN_QUEUE_SIZE);
+        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(table.baseTable.getPageFiles().size(), OUT_QUEUE_SIZE);
         ArrayList<LinkedBlockingQueue<OrderIdRowIndex>> orderIndexQueues
-                = createQueues(table.orderIndex.getPageFiles().size(), QUEUE_SIZE);
+                = createQueues(table.orderIndex.getPageFiles().size(), 2*OUT_QUEUE_SIZE);
         ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexQueues
-                = createQueues(table.buyerCreateTimeIndex.getPageFiles().size(), QUEUE_SIZE);
+                = createQueues(table.buyerCreateTimeIndex.getPageFiles().size(), 2*OUT_QUEUE_SIZE);
         ArrayList<Reader> readers = createReaders(orderFiles, inQueues);
         ArrayList<Parser> parsers = createParser(inQueues, outQueues, table.baseTable);
         ArrayList<OrderWriter> orderWriters = createOrderWriter(outQueues, table.baseTable,

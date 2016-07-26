@@ -53,21 +53,6 @@ public class Parser implements Runnable {
                 row.setHashCode(HashIndex.getHashCode(value));
             }
         }
-//        String[] kvs = line.split("\t");
-//        Row row = new Row();
-//        for (String rawkv : kvs) {
-//            int p = rawkv.indexOf(':');
-//            String key = rawkv.substring(0, p);
-//            String value = rawkv.substring(p + 1);
-//            if (key.length() == 0 || value.length() == 0) {
-//                throw new RuntimeException("Bad data:" + line);
-//            }
-//            int columnId = this.table.getColumnId(key);
-//            row.insert(columnId, value);
-//            if (columnId == 0) {
-//                row.setHashCode(HashIndex.getHashCode(value));
-//            }
-//        }
         return row;
     }
 
@@ -88,7 +73,6 @@ public class Parser implements Runnable {
     @Override
     public void run() {
         this.threadId = Thread.currentThread().getId();
-//        System.out.println("INFO: Parser thread is running. Thread id:" + threadId);
         while (true) {
             this.nextLine();
             if(line.isEmpty()) {
@@ -104,9 +88,6 @@ public class Parser implements Runnable {
                 }
             }
             rowCount ++;
-//            if(rowCount % 30 == 0) {
-//                System.out.println("INFO: Parser count is:" + rowCount + ". Thread id:" + threadId);
-//            }
         }
         System.out.println("INFO: Parser thread completed. rowCount:" + rowCount + " Thread id:" + threadId);
     }

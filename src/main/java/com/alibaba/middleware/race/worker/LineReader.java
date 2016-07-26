@@ -2,6 +2,7 @@ package com.alibaba.middleware.race.worker;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.IOException;
 
 
 public class LineReader {
@@ -9,7 +10,7 @@ public class LineReader {
 
     public LineReader(String file) {
         try {
-            reader = new BufferedReader(new FileReader(file));
+            reader = new BufferedReader(new FileReader(file), 16*(1024));
         }catch (Exception e) {
             e.printStackTrace();
         }
@@ -22,6 +23,10 @@ public class LineReader {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public String readLine() throws IOException {
+        return reader.readLine();
     }
 
     public void close() {

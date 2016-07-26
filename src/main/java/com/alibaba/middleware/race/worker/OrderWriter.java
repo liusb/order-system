@@ -103,7 +103,6 @@ public class OrderWriter implements Runnable {
     @Override
     public void run() {
         this.threadId = Thread.currentThread().getId();
-//        System.out.println("INFO: Writer thread is running. Thread id:" + threadId);
         while (true) {
             this.nextRow();
             if(row.isEmpty()) {
@@ -116,7 +115,7 @@ public class OrderWriter implements Runnable {
             this.outputOrderIndex();
             this.outputBuyerIndex();
             inCount++;
-            if(inCount % 40000000 == 0) {
+            if((inCount & ((1<<24)-1)) == 0) {
                 System.out.println("INFO: Write " + inCount + "Order used "
                         + (System.currentTimeMillis()- beginMillis) + "millis in thread " + threadId);
             }
