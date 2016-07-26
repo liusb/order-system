@@ -177,7 +177,7 @@ public class WorkerManager implements Runnable {
         ArrayList<OrderWriter> orderWriters = createOrderWriter(outQueues, table.baseTable,
                 orderIndexIndex, orderIndexQueues, buyerIndexIndex, buyerIndexQueues);
         ArrayList<IndexWriter<OrderIdRowIndex>> orderIndexWriters = createIndexWriter(orderIndexQueues,
-                table.orderIndex.getPageFiles(), baseIndex);
+                table.orderIndex.getPageFiles(), orderIndexIndex);
         ArrayList<IndexWriter<BuyerIdRowIndex>> buyerIndexWriters = createIndexWriter(buyerIndexQueues,
                 table.buyerCreateTimeIndex.getPageFiles(), buyerIndexIndex);
 
