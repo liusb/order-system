@@ -232,7 +232,20 @@ public class OrderSystemImpl implements OrderSystem {
                 } else if(value instanceof Double) {
                     hasDouble = true;
                     sumDouble += ((Double) value);
-                } else {
+                } else if (value instanceof String) {
+                    try {
+                        hasLong = true;
+                        sumLong +=  Long.parseLong(((String) value));
+                    } catch (NumberFormatException e) {
+                        try {
+                            hasDouble = true;
+                            sumDouble += Double.parseDouble(((String) value));
+                        } catch (NumberFormatException e2) {
+                            return null;
+                        }
+                    }
+                }
+                else {
                     return null;
                 }
             }
