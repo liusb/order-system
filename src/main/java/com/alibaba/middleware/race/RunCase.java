@@ -15,15 +15,15 @@ public class RunCase {
         List<String> goodFiles = new ArrayList<String>();
         List<String> storeFolders = new ArrayList<String>();
 
-        orderFiles.add("./prerun_data/order.0.0");
-        orderFiles.add("./prerun_data/order.0.3");
-        orderFiles.add("./prerun_data/order.1.1");
-        orderFiles.add("./prerun_data/order.2.2");
-        buyerFiles.add("./prerun_data/buyer.0.0");
-        buyerFiles.add("./prerun_data/buyer.1.1");
-        goodFiles.add("./prerun_data/good.0.0");
-        goodFiles.add("./prerun_data/good.1.1");
-        goodFiles.add("./prerun_data/good.2.2");
+        orderFiles.add("./prerun_data/disk1/order.0.0");
+        orderFiles.add("./prerun_data/disk1/order.0.3");
+        orderFiles.add("./prerun_data/disk2/order.1.1");
+        orderFiles.add("./prerun_data/disk3/order.2.2");
+        buyerFiles.add("./prerun_data/disk1/buyer.0.0");
+        buyerFiles.add("./prerun_data/disk2/buyer.1.1");
+        goodFiles.add("./prerun_data/disk1/good.0.0");
+        goodFiles.add("./prerun_data/disk2/good.1.1");
+        goodFiles.add("./prerun_data/disk3/good.2.2");
         storeFolders.add("./prerun_data/1");
         storeFolders.add("./prerun_data/2");
         storeFolders.add("./prerun_data/3");
@@ -35,28 +35,27 @@ public class RunCase {
         //SysteCheck.systemCheck(orderFiles, buyerFiles, goodFiles, os);
 
         // 用例
-        String line;
+        checkCase(os, 20);
 
+    }
+
+    private static void checkCase(OrderSystem os, int caseFileLimit) {
+        String line;
         long orderId;
         Collection<String> keys;
         String keysStr;
-
         long startTime;
         long endTime;
         String buyerid;
-
         String salerid;
         String goodid;
-        // Collection<String> keys;
-
-        // String goodid;
         String key;
 
         OrderSystem.Result result;
         String resultStr;
         OrderSystem.KeyValue keyValue;
         Iterator<OrderSystem.Result> resultIterator;
-        for (int i=0; i<20; i++) {
+        for (int i=0; i<caseFileLimit; i++) {
             LineReader lineReader = new LineReader("./prerun_data/case/case.1."+i);
             System.out.println("正在评测的文件为：case.0." +i);
             while (true) {
@@ -129,7 +128,8 @@ public class RunCase {
                         line = lineReader.nextLine();
                         result = resultIterator.next();
                         resultStr = result.toString();
-                        if (!line.equals(resultStr) && (line.length() != resultStr.length() || !compareResult(line, result))) {
+                        if (!line.equals(resultStr) &&
+                                (line.length() != resultStr.length() || !compareResult(line, result))) {
                             throw new RuntimeException("CASE:QUERY_SALER_GOOD, salerid:" + salerid
                                     + " goodid:" + goodid + " " + keysStr + " 结果不一致\n"
                                     + line + "\n not equal \n" + result);
@@ -148,7 +148,8 @@ public class RunCase {
                     key = line.substring(line.indexOf('[') + 1, line.indexOf(']') - 1);
                     keyValue = os.sumOrdersByGood(goodid, key);
                     line = lineReader.nextLine();
-                    if ((keyValue != null && !compareSum(line.substring(line.indexOf(':') + 1), keyValue.valueAsString()))
+                    if ((keyValue != null &&
+                            !compareSum(line.substring(line.indexOf(':') + 1), keyValue.valueAsString()))
                             || (keyValue == null && !line.equals("RESULT:null"))) {
                         throw new RuntimeException(line + "\n not equal \n" + keyValue);
                     }
