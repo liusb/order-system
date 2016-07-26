@@ -15,8 +15,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class WorkerManager implements Runnable {
 
-    private static final int PARSER_THREAD_NUM = 24;
-    private static final int IN_QUEUE_SIZE = 32;
+    private static final int PARSER_THREAD_NUM = 16;
+    private static final int IN_QUEUE_SIZE = 42;
     private static final int OUT_QUEUE_SIZE = 64;
     private static final int MetricTime = 10000;
 
@@ -151,7 +151,7 @@ public class WorkerManager implements Runnable {
         HashIndex orderIndexIndex = table.orderIndex.getIndex();
         HashIndex buyerIndexIndex = table.buyerCreateTimeIndex.getIndex();
         ArrayList<LinkedBlockingQueue<String>> inQueues = createQueues(PARSER_THREAD_NUM, IN_QUEUE_SIZE);
-        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(table.baseTable.getPageFiles().size(), OUT_QUEUE_SIZE);
+        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(table.baseTable.getPageFiles().size(), 2*OUT_QUEUE_SIZE);
         ArrayList<LinkedBlockingQueue<OrderIdRowIndex>> orderIndexQueues
                 = createQueues(table.orderIndex.getPageFiles().size(), 2*OUT_QUEUE_SIZE);
         ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexQueues

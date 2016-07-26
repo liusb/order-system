@@ -24,6 +24,8 @@ public class Reader implements Runnable {
     @Override
     public void run() {
         this.threadId = Thread.currentThread().getId();
+        int step = (int)(threadId%3);
+        int i;
         try {
             for (String file : this.files) {
                 in = new LineReader(file);
@@ -31,7 +33,10 @@ public class Reader implements Runnable {
                 while (line != null) {
                     while (true) {
                         try {
-                            if (!outs.get((int) lineCount % outSize).offer(line, 1, TimeUnit.MICROSECONDS)) {
+                            for (i=1; i < 16; i++) {
+                                outs.get((int) (lineCount+i*step) % outSize).offer(line, 420, TimeUnit.MICROSECONDS);
+                            }
+                            if (i==16) {
                                 outs.get((int) (lineCount + threadId) % outSize).put(line);
                             }
                             break;
