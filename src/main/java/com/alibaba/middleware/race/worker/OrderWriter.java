@@ -30,6 +30,7 @@ public class OrderWriter implements Runnable {
 
     private long inCount;
     private long threadId;
+    private long beginMillis;
 
     public OrderWriter(LinkedBlockingQueue<Row> in, PageStore pageFile, byte fileId, HashIndex index,
                        HashIndex orderIndexIndex, ArrayList<LinkedBlockingQueue<OrderIdRowIndex>> orderIndexOut,
@@ -51,6 +52,7 @@ public class OrderWriter implements Runnable {
         this.buyerCreateTimeColumnId = buyerCreateTimeColumnId;
         this.inCount = 0;
         this.threadId = 0;
+        this.beginMillis = System.currentTimeMillis();
     }
 
     private void nextRow() {
@@ -114,9 +116,10 @@ public class OrderWriter implements Runnable {
             this.outputOrderIndex();
             this.outputBuyerIndex();
             inCount++;
-//            if(inCount % 30 == 0) {
-//                System.out.println("INFO: Writer count is:" + inCount + ". Thread id:" + threadId);
-//            }
+            if(inCount % 40000000 == 0) {
+                System.out.println("INFO: Write " + inCount + "Order used "
+                        + (System.currentTimeMillis()- beginMillis) + "millis in thread " + threadId);
+            }
         }
         this.pageFile.close();
         System.out.println("INFO: OrderWriter thread completed. inCount:" + inCount + " Thread id:" + threadId);
