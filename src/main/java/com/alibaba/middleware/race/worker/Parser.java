@@ -44,7 +44,11 @@ public class Parser implements Runnable {
             key = tokenizer.nextToken();
             value = tokenizer.nextToken();
             int columnId = this.table.getColumnId(key);
-            row.insert(columnId, value);
+            if (key.equals("orderid") || key.equals("createtime")) {
+                row.insert(columnId, Long.parseLong(value));
+            } else {
+                row.insert(columnId, value);
+            }
             if (columnId == 0) {
                 row.setHashCode(HashIndex.getHashCode(value));
             }
