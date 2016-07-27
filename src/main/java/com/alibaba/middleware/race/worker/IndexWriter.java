@@ -48,13 +48,19 @@ public class IndexWriter<T extends RowIndex> implements Runnable {
         this.threadId = Thread.currentThread().getId();
         while (true) {
             this.nextRow();
-            if(row.getRecodeIndex().getFileId()==-1) {
+            if(row.getRecodeIndex().getAddress()==-1) {
                 break;
             }
             buffer.reset();
-            buffer.writeInt(row.getHashCode());
-            buffer.writeByte(row.getRecodeIndex().getFileId());
-            buffer.writeLong(row.getRecodeIndex().getAddress());
+            if (row instanceof RowIndex) {
+                buffer.writeInt(row.getHashCode());
+                buffer.writeByte(row.getRecodeIndex().getFileId());
+                buffer.writeLong(row.getRecodeIndex().getAddress());
+            } else {
+                buffer.writeInt(row.getHashCode());
+                buffer.writeByte(row.getRecodeIndex().getFileId());
+                buffer.writeLong(row.getRecodeIndex().getAddress());
+            }
             int bucketId = index.getBucketId(row.getHashCode());
             pageFile.insertIndexData(bucketId, buffer);
             inCount++;

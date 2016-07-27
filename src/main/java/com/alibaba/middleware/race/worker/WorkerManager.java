@@ -150,14 +150,14 @@ public class WorkerManager implements Runnable {
         table.init(storeFolders, orderFiles);
         HashIndex goodIndexIndex = table.goodIndex.getIndex();
         HashIndex orderIndexIndex = table.orderIndex.getIndex();
-        HashIndex buyerIndexIndex = table.buyerCreateTimeIndex.getIndex();
+        HashIndex buyerIndexIndex = table.buyerIndex.getIndex();
         ArrayList<LinkedBlockingQueue<OrderLine>> inQueues = createQueues(PARSER_THREAD_NUM, IN_QUEUE_SIZE);
         ArrayList<LinkedBlockingQueue<RowIndex>> goodIndexQueues
                 = createQueues(table.goodIndex.getPageFiles().size(), OUT_QUEUE_SIZE);
         ArrayList<LinkedBlockingQueue<RowIndex>> orderIndexQueues
                 = createQueues(table.orderIndex.getPageFiles().size(), OUT_QUEUE_SIZE);
         ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexQueues
-                = createQueues(table.buyerCreateTimeIndex.getPageFiles().size(), OUT_QUEUE_SIZE);
+                = createQueues(table.buyerIndex.getPageFiles().size(), OUT_QUEUE_SIZE);
         ArrayList<OrderReader> readers = createReaders(table.orderFilesMap, inQueues);
         ArrayList<OrderParser> parsers = createOrderParser(inQueues, goodIndexQueues, orderIndexQueues, buyerIndexQueues,
                 goodIndexIndex, orderIndexIndex, buyerIndexIndex);
@@ -166,7 +166,7 @@ public class WorkerManager implements Runnable {
         ArrayList<IndexWriter<RowIndex>> orderIndexWriters = createIndexWriter(orderIndexQueues,
                 table.orderIndex.getPageFiles(), orderIndexIndex);
         ArrayList<IndexWriter<BuyerIdRowIndex>> buyerIndexWriters = createIndexWriter(buyerIndexQueues,
-                table.buyerCreateTimeIndex.getPageFiles(), buyerIndexIndex);
+                table.buyerIndex.getPageFiles(), buyerIndexIndex);
 
         ArrayList<Thread> readerThreads = new ArrayList<Thread>();
         for (OrderReader reader: readers) {

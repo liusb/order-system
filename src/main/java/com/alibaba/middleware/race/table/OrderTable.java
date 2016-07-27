@@ -1,7 +1,6 @@
 package com.alibaba.middleware.race.table;
 
-import com.alibaba.middleware.race.index.BuyerIdRowIndex;
-import com.alibaba.middleware.race.index.RowIndex;
+import com.alibaba.middleware.race.index.RecordIndex;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -47,7 +46,7 @@ public class OrderTable {
 
     private static final int BUYER_INDEX_PAGE_SIZE = 2*(1<<10);
     // 索引为buyerId, 记录存储格式为[createTime, buyerId, fileId, address](long, string, byte, long)
-    public HashTable buyerCreateTimeIndex;
+    public HashTable buyerIndex;
 
     public HashMap<String, Byte> orderFilesMap;
 
@@ -60,9 +59,9 @@ public class OrderTable {
         orderIndex.setBaseColumns(INDEX_COLUMNS);
         orderIndex.init(storeFolders, ORDER_INDEX_BUCKET_SIZE, ORDER_INDEX_CACHE_SIZE, ORDER_INDEX_PAGE_SIZE);
 
-        buyerCreateTimeIndex = new HashTable("buyerCreateTimeIndex");
-        buyerCreateTimeIndex.setBaseColumns(INDEX_COLUMNS);
-        buyerCreateTimeIndex.init(storeFolders, BUYER_INDEX_BUCKET_SIZE, BUYER_INDEX_CACHE_SIZE, BUYER_INDEX_PAGE_SIZE);
+        buyerIndex = new HashTable("buyerIndex");
+        buyerIndex.setBaseColumns(INDEX_COLUMNS);
+        buyerIndex.init(storeFolders, BUYER_INDEX_BUCKET_SIZE, BUYER_INDEX_CACHE_SIZE, BUYER_INDEX_PAGE_SIZE);
 
         orderFilesMap = new HashMap<String, Byte>(43);
         byte fileId=1;
@@ -80,31 +79,31 @@ public class OrderTable {
     public void reopen() {
         goodIndex.reopen(GOOD_REOPEN_TABLE_CACHE_SIZE);
         orderIndex.reopen(REOPEN_ORDER_INDEX_CACHE_SIZE);
-        buyerCreateTimeIndex.reopen(REOPEN_BUYER_INDEX_CACHE_SIZE);
+        buyerIndex.reopen(REOPEN_BUYER_INDEX_CACHE_SIZE);
         this.prepared = true;
     }
 
-    public RowIndex findOderIdIndex(long orderId) {
+    public RecordIndex findOderIdIndex(long orderId) {
         return this.orderIndex.findIndex(orderId);
     }
 
-    public HashMap<String, Object> findOrders(RowIndex orderIdRowIndex) {
-        return this.baseTable.findOrder(orderIdRowIndex);
+    public ArrayList<RecordIndex> findGoodIdIndex(String goodId) {
+        return this.goodIndex.findIndex(goodId);
     }
 
-    public ArrayList<BuyerIdRowIndex> findBuyerIdIndex(String buyerId, long startTime, long endTime) {
-        return this.buyerCreateTimeIndex.findIndex(buyerId, startTime, endTime);
+    public ArrayList<RecordIndex> findBuyerIdIndex(String buyerId, long startTime, long endTime) {
+        return this.buyerIndex.findIndex(buyerId, startTime, endTime);
     }
 
-    public ArrayList<HashMap<String, Object>> findOrders(ArrayList<BuyerIdRowIndex> buyerIdRowIndices) {
+    public HashMap<String, Object> findOrder(RecordIndex recordIndex) {
+        return null;
+    }
+
+    public ArrayList<HashMap<String, Object>> findOrders(ArrayList<RecordIndex> recordIndices) {
         ArrayList<HashMap<String, Object>> results = new ArrayList<HashMap<String, Object>>();
-        for (BuyerIdRowIndex index: buyerIdRowIndices) {
-            results.add(baseTable.findOrder(index));
+        for (RecordIndex index: recordIndices) {
+            //results.add(baseTable.findOrder(index));
         }
         return results;
-    }
-
-    public ArrayList<HashMap<String, Object>> findOrders(String goodId) {
-        return this.baseTable.findOrders(goodId);
     }
 }

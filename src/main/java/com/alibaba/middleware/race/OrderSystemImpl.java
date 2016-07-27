@@ -1,6 +1,7 @@
 package com.alibaba.middleware.race;
 
 import com.alibaba.middleware.race.index.BuyerIdRowIndex;
+import com.alibaba.middleware.race.index.RecordIndex;
 import com.alibaba.middleware.race.index.RowIndex;
 import com.alibaba.middleware.race.result.KVImpl;
 import com.alibaba.middleware.race.result.ResultImpl;
@@ -96,21 +97,19 @@ public class OrderSystemImpl implements OrderSystem {
                 e.printStackTrace();
             }
         }
-        TreeMap<Integer, String> orderKeys = null;
         TreeMap<Integer, String> goodKeys = null;
         TreeMap<Integer, String> buyerKeys = null;
         if (keys != null) {
-            orderKeys = new TreeMap<Integer, String>();
             goodKeys = new TreeMap<Integer, String>();
             buyerKeys = new TreeMap<Integer, String>();
-            keyOfTable(keys, orderKeys, goodKeys, buyerKeys);
+            keyOfTable(keys, goodKeys, buyerKeys);
         }
         // 查找订单表
-        RowIndex orderIdRowIndex = OrderTable.getInstance().findOderIdIndex(orderId);
+        RecordIndex orderIdRowIndex = OrderTable.getInstance().findOderIdIndex(orderId);
         if (orderIdRowIndex == null) {
             return null;
         }
-        HashMap<String, Object> orderRecord = OrderTable.getInstance().findOrders(orderIdRowIndex);
+        HashMap<String, Object> orderRecord = OrderTable.getInstance().findOrder(orderIdRowIndex);
 //        if (orderRecord.isEmpty()) {
 //            throw new RuntimeException("找到了索引找不到记录");
 //        }
@@ -174,7 +173,7 @@ public class OrderSystemImpl implements OrderSystem {
             }
         }
         ArrayList<ResultImpl> results = new ArrayList<ResultImpl>();
-        ArrayList<BuyerIdRowIndex> buyerIdRowIndices = OrderTable.getInstance()
+        ArrayList<RecordIndex> buyerIdRowIndices = OrderTable.getInstance()
                 .findBuyerIdIndex(buyerId, startTime, endTime);
         HashMap<String, Object> buyerRecord = BuyerTable.getInstance().find(buyerId);
         ArrayList<HashMap<String, Object>>  orderRecords = OrderTable.getInstance().findOrders(buyerIdRowIndices);
@@ -206,7 +205,9 @@ public class OrderSystemImpl implements OrderSystem {
         }
         ArrayList<ResultImpl> results = new ArrayList<ResultImpl>();
         HashMap<String, Object> goodRecord = GoodTable.getInstance().find(goodId);
-        ArrayList<HashMap<String, Object>>  orderRecords = OrderTable.getInstance().findOrders(goodId);
+
+        ArrayList<RecordIndex> goodRowIndex = OrderTable.getInstance().findGoodIdIndex(goodId);
+        ArrayList<HashMap<String, Object>>  orderRecords = OrderTable.getInstance().findOrders(goodRowIndex);
         for (HashMap<String, Object> order : orderRecords) {
             String buyerId = ((String) order.get("buyerid"));
             HashMap<String, Object> buyerRecord = BuyerTable.getInstance().find(buyerId);
@@ -254,7 +255,8 @@ public class OrderSystemImpl implements OrderSystem {
         double sumDouble = 0.0;
         boolean hasLong = false;
         boolean hasDouble = false;
-        ArrayList<HashMap<String, Object>>  orderRecords = OrderTable.getInstance().findOrders(goodId);
+        ArrayList<RecordIndex> goodRowIndex = OrderTable.getInstance().findGoodIdIndex(goodId);
+        ArrayList<HashMap<String, Object>>  orderRecords = OrderTable.getInstance().findOrders(goodRowIndex);
         HashMap<String, Object> goodRecord = GoodTable.getInstance().find(goodId);
         for (HashMap<String, Object> order : orderRecords) {
             Object value = order.get(key);
@@ -319,26 +321,20 @@ public class OrderSystemImpl implements OrderSystem {
 
 
     // 找到各表的字段
-    private void keyOfTable(Collection<String> keys, TreeMap<Integer, String> orderKeys,
+    private void keyOfTable(Collection<String> keys,
                             TreeMap<Integer, String> goodKeys, TreeMap<Integer, String> buyerKeys) {
-        HashTable orderTable = OrderTable.getInstance().baseTable;
         HashTable goodTable = GoodTable.getInstance().baseTable;
         HashTable buyerTable = BuyerTable.getInstance().baseTable;
 
         Integer columnId;
         for(String key: keys) {
-            columnId = orderTable.findColumnId(key);
+            columnId = goodTable.findColumnId(key);
             if (columnId != null) {
-                orderKeys.put(columnId, key);
+                goodKeys.put(columnId, key);
             } else {
-                columnId = goodTable.findColumnId(key);
+                columnId = buyerTable.findColumnId(key);
                 if (columnId != null) {
-                    goodKeys.put(columnId, key);
-                } else {
-                    columnId = buyerTable.findColumnId(key);
-                    if (columnId != null) {
-                        buyerKeys.put(columnId, key);
-                    }
+                    buyerKeys.put(columnId, key);
                 }
             }
         }
