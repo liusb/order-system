@@ -15,10 +15,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class WorkerManager implements Runnable {
 
-    private static final int PARSER_THREAD_NUM = 10;
+    private static final int PARSER_THREAD_NUM = 16;
     private static final int IN_QUEUE_SIZE = 1024;
     private static final int OUT_QUEUE_SIZE = 16*1024;
-    private static final int MetricTime = 5000;
+    private static final int MetricTime = 1000;
 
     private Collection<String> storeFolders;
     private Collection<String> orderFiles;
