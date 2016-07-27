@@ -15,15 +15,26 @@ public class OrderTable {
     private OrderTable() {}
 
 
-    // 哈希桶的总个数
-//    private static final int TABLE_BUCKET_SIZE = 256;
-//    // 建立表示很LRU缓存的大小
-//    private static final int TABLE_CACHE_SIZE = 256;
-//    private static final int REOPEN_TABLE_CACHE_SIZE = 256;
+//    private static final int TABLE_BUCKET_SIZE = 128;
+//    private static final int TABLE_CACHE_SIZE = 128;
+//    private static final int REOPEN_TABLE_CACHE_SIZE = 128;
+//    private static final int ORDER_INDEX_BUCKET_SIZE = 64;
+//    private static final int ORDER_INDEX_CACHE_SIZE = 64;
+//    private static final int REOPEN_ORDER_INDEX_CACHE_SIZE = 16;
+//    private static final int BUYER_INDEX_BUCKET_SIZE = 64;
+//    private static final int BUYER_INDEX_CACHE_SIZE = 64;
+//    private static final int REOPEN_BUYER_INDEX_CACHE_SIZE = 16;
+
     private static final int TABLE_BUCKET_SIZE = 128*(1<<10);
-    // 建立表示很LRU缓存的大小
     private static final int TABLE_CACHE_SIZE = 128*(1<<10);
     private static final int REOPEN_TABLE_CACHE_SIZE = 128*(1<<10);
+    private static final int ORDER_INDEX_BUCKET_SIZE = 64*(1<<10);
+    private static final int ORDER_INDEX_CACHE_SIZE = 64*(1<<10);
+    private static final int REOPEN_ORDER_INDEX_CACHE_SIZE = 16*(1<<10);
+    private static final int BUYER_INDEX_BUCKET_SIZE = 64*(1<<10);
+    private static final int BUYER_INDEX_CACHE_SIZE = 64*(1<<10);
+    private static final int REOPEN_BUYER_INDEX_CACHE_SIZE = 16*(1<<10);
+
     // 每页的大小，单位为byte
     private static final int TABLE_PAGE_SIZE = 8*(1<<10);
     // 本身存储 索引为goodId, 存储格式为[goodId, orderId, buyerId, createTime, ......]
@@ -31,22 +42,10 @@ public class OrderTable {
     public HashTable baseTable;
 
     private static final String[] INDEX_COLUMNS = {};   // 索引不需要列信息
-//    private static final int ORDER_INDEX_BUCKET_SIZE = 256;
-//    private static final int ORDER_INDEX_CACHE_SIZE = 128;
-//    private static final int REOPEN_ORDER_INDEX_CACHE_SIZE = 16;
-    private static final int ORDER_INDEX_BUCKET_SIZE = 64*(1<<10);
-    private static final int ORDER_INDEX_CACHE_SIZE = 64*(1<<10);
-    private static final int REOPEN_ORDER_INDEX_CACHE_SIZE = 16*(1<<10);
     private static final int ORDER_INDEX_PAGE_SIZE = 2*(1<<10);  // 1KB
     // 索引为orderId 记录存储格式为[orderId, fileId, address](long, byte, long)
     public HashTable orderIndex;
 
-//    private static final int BUYER_INDEX_BUCKET_SIZE = 256;
-//    private static final int BUYER_INDEX_CACHE_SIZE = 128;
-//    private static final int REOPEN_BUYER_INDEX_CACHE_SIZE = 16;
-    private static final int BUYER_INDEX_BUCKET_SIZE = 64*(1<<10);
-    private static final int BUYER_INDEX_CACHE_SIZE = 64*(1<<10);
-    private static final int REOPEN_BUYER_INDEX_CACHE_SIZE = 16*(1<<10);
     private static final int BUYER_INDEX_PAGE_SIZE = 2*(1<<10);
     // 索引为buyerId, 记录存储格式为[createTime, buyerId, fileId, address](long, string, byte, long)
     public HashTable buyerCreateTimeIndex;

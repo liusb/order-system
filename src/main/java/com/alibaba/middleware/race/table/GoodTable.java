@@ -13,15 +13,11 @@ public class GoodTable {
     }
     private GoodTable() { }
 
-//    // 哈希桶的总个数
 //    private static final int TABLE_BUCKET_SIZE = 256;
-//    // 建立表示很LRU缓存的大小
 //    private static final int TABLE_CACHE_SIZE = 256;
-//    private static final int REOPEN_TABLE_CACHE_SIZE = 16;
+//    private static final int REOPEN_TABLE_CACHE_SIZE = 4;
 
-    // 哈希桶的总个数
     private static final int TABLE_BUCKET_SIZE = 256*(1<<10);
-    // 建立表示很LRU缓存的大小
     private static final int TABLE_CACHE_SIZE = 256*(1<<10);
     private static final int REOPEN_TABLE_CACHE_SIZE = 4*(1<<10);
     // 每页的大小，单位为byte
