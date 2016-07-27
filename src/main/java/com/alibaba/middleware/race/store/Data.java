@@ -81,6 +81,48 @@ public class Data {
         return x;
     }
 
+    public void writeVarInt(int x) {
+        while ((x & ~0x7f) != 0) {
+            data[pos++] = (byte) (0x80 | (x & 0x7f));
+            x >>>= 7;
+        }
+        data[pos++] = (byte) x;
+    }
+
+    public int readVarInt() {
+        int b = data[pos];
+        if (b >= 0) {
+            pos++;
+            return b;
+        }
+        // a separate function so that this one can be inlined
+        return readVarIntRest(b);
+    }
+
+    private int readVarIntRest(int b) {
+        int x = b & 0x7f;
+        b = data[pos + 1];
+        if (b >= 0) {
+            pos += 2;
+            return x | (b << 7);
+        }
+        x |= (b & 0x7f) << 7;
+        b = data[pos + 2];
+        if (b >= 0) {
+            pos += 3;
+            return x | (b << 14);
+        }
+        x |= (b & 0x7f) << 14;
+        b = data[pos + 3];
+        if (b >= 0) {
+            pos += 4;
+            return x | b << 21;
+        }
+        x |= ((b & 0x7f) << 21) | (data[pos + 4] << 28);
+        pos += 5;
+        return x;
+    }
+
     public void writeLong(long x) {
         writeInt((int) (x >>> 32));
         writeInt((int) x);
@@ -88,6 +130,29 @@ public class Data {
 
     public long readLong() {
         return ((long) (readInt()) << 32) + (readInt() & 0xffffffffL);
+    }
+
+    public void writeVarLong(long x) {
+        while ((x & ~0x7f) != 0) {
+            data[pos++] = (byte) ((x & 0x7f) | 0x80);
+            x >>>= 7;
+        }
+        data[pos++] = (byte) x;
+    }
+
+    public long readVarLong() {
+        long x = data[pos++];
+        if (x >= 0) {
+            return x;
+        }
+        x &= 0x7f;
+        for (int s = 7;; s += 7) {
+            long b = data[pos++];
+            x |= (b & 0x7f) << s;
+            if (b >= 0) {
+                return x;
+            }
+        }
     }
 
     public void writeDouble(double x) {

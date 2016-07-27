@@ -3,7 +3,7 @@ package com.alibaba.middleware.race.table;
 import com.alibaba.middleware.race.cache.SafeData;
 import com.alibaba.middleware.race.index.BuyerIdRowIndex;
 import com.alibaba.middleware.race.index.HashIndex;
-import com.alibaba.middleware.race.index.OrderIdRowIndex;
+import com.alibaba.middleware.race.index.RecordIndex;
 import com.alibaba.middleware.race.index.RowIndex;
 import com.alibaba.middleware.race.store.Data;
 import com.alibaba.middleware.race.store.HashDataPage;
@@ -90,9 +90,8 @@ public class HashTable extends Table {
                     if (readString.equals(buyerId)) {
                         readTime = data.readLong();
                         if (readTime >= startTime && readTime < endTime) {
-                            BuyerIdRowIndex result = new BuyerIdRowIndex(data.readByte(), data.readLong());
-                            result.setBuyerId(buyerId);
-                            result.setCreateTime(readTime);
+                            RecordIndex recodeIndex = new RecordIndex(data.readByte(), data.readLong());
+                            BuyerIdRowIndex result = new BuyerIdRowIndex(recodeIndex, data.readInt(), data.readLong());
                             results.add(result);
                         } else {
                             data.skip(1+8);
@@ -110,7 +109,7 @@ public class HashTable extends Table {
         return results;
     }
 
-    public OrderIdRowIndex findIndex(long orderId) {
+    public RowIndex findIndex(long orderId) {
         int hashCode = HashIndex.getHashCode(orderId);
         PageStore pageStore = storeFiles.get(index.getFileIndex(hashCode));
         int bucketIndex = index.getBucketId(hashCode);
@@ -130,9 +129,9 @@ public class HashTable extends Table {
                 if (readOrderId != orderId) {
                     data.skip(1+8);
                 } else {
-                    OrderIdRowIndex result = new OrderIdRowIndex(data.readByte(), data.readLong());
-                    result.setOrderId(orderId);
-                    return result;
+                    int readHashCode = data.readInt();
+                    RecordIndex recodeIndex = new RecordIndex(data.readByte(), data.readLong());
+                    return new RowIndex(recodeIndex, readHashCode);
                 }
             }
             bucketIndex = page.getNextPage();
@@ -143,9 +142,9 @@ public class HashTable extends Table {
     }
 
     public HashMap<String, Object> findOrder(RowIndex rowIndex) {
-        PageStore pageStore = this.storeFiles.get(rowIndex.getFileId());
-        int pageId = (int)(rowIndex.getAddress()/this.pageSize);
-        int offset = (int)(rowIndex.getAddress()%this.pageSize);
+        PageStore pageStore = this.storeFiles.get(rowIndex.getRecodeIndex().getFileId());
+        int pageId = (int)(rowIndex.getRecodeIndex().getAddress()/this.pageSize);
+        int offset = (int)(rowIndex.getRecodeIndex().getAddress()%this.pageSize);
         HashDataPage page = pageStore.getPage(pageId);
         Data data = new Data(page.getData().getBytes(), HashDataPage.HeaderLength);
         data.setPos(offset + 4);   // skip hashCode

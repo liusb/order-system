@@ -1,7 +1,7 @@
 package com.alibaba.middleware.race;
 
 import com.alibaba.middleware.race.index.BuyerIdRowIndex;
-import com.alibaba.middleware.race.index.OrderIdRowIndex;
+import com.alibaba.middleware.race.index.RowIndex;
 import com.alibaba.middleware.race.result.KVImpl;
 import com.alibaba.middleware.race.result.ResultImpl;
 import com.alibaba.middleware.race.result.ResultIterator;
@@ -96,17 +96,17 @@ public class OrderSystemImpl implements OrderSystem {
                 e.printStackTrace();
             }
         }
-//        TreeMap<Integer, String> orderKeys = null;
-//        TreeMap<Integer, String> goodKeys = null;
-//        TreeMap<Integer, String> buyerKeys = null;
-//        if (keys != null) {
-//            orderKeys = new TreeMap<Integer, String>();
-//            goodKeys = new TreeMap<Integer, String>();
-//            buyerKeys = new TreeMap<Integer, String>();
-//            keyOfTable(keys, orderKeys, goodKeys, buyerKeys);
-//        }
+        TreeMap<Integer, String> orderKeys = null;
+        TreeMap<Integer, String> goodKeys = null;
+        TreeMap<Integer, String> buyerKeys = null;
+        if (keys != null) {
+            orderKeys = new TreeMap<Integer, String>();
+            goodKeys = new TreeMap<Integer, String>();
+            buyerKeys = new TreeMap<Integer, String>();
+            keyOfTable(keys, orderKeys, goodKeys, buyerKeys);
+        }
         // 查找订单表
-        OrderIdRowIndex orderIdRowIndex = OrderTable.getInstance().findOderIdIndex(orderId);
+        RowIndex orderIdRowIndex = OrderTable.getInstance().findOderIdIndex(orderId);
         if (orderIdRowIndex == null) {
             return null;
         }
@@ -319,24 +319,28 @@ public class OrderSystemImpl implements OrderSystem {
 
 
     // 找到各表的字段
-//    private void keyOfTable(Collection<String> keys, TreeMap<Integer, String> orderKeys,
-//                            TreeMap<Integer, String> goodKeys, TreeMap<Integer, String> buyerKeys) {
-//        Column column;
-//        for(String key: keys) {
-//            column = orderColumns.get(key);
-//            if (column != null) {
-//                orderKeys.put(column.getColumnId(), key);
-//            } else {
-//                column = goodColumns.get(key);
-//                if (column != null) {
-//                    goodKeys.put(column.getColumnId(), key);
-//                } else {
-//                    column = buyerColumns.get(key);
-//                    if (column != null) {
-//                        buyerKeys.put(column.getColumnId(), key);
-//                    }
-//                }
-//            }
-//        }
-//    }
+    private void keyOfTable(Collection<String> keys, TreeMap<Integer, String> orderKeys,
+                            TreeMap<Integer, String> goodKeys, TreeMap<Integer, String> buyerKeys) {
+        HashTable orderTable = OrderTable.getInstance().baseTable;
+        HashTable goodTable = GoodTable.getInstance().baseTable;
+        HashTable buyerTable = BuyerTable.getInstance().baseTable;
+
+        Integer columnId;
+        for(String key: keys) {
+            columnId = orderTable.findColumnId(key);
+            if (columnId != null) {
+                orderKeys.put(columnId, key);
+            } else {
+                columnId = goodTable.findColumnId(key);
+                if (columnId != null) {
+                    goodKeys.put(columnId, key);
+                } else {
+                    columnId = buyerTable.findColumnId(key);
+                    if (columnId != null) {
+                        buyerKeys.put(columnId, key);
+                    }
+                }
+            }
+        }
+    }
 }

@@ -2,7 +2,7 @@ package com.alibaba.middleware.race.worker;
 
 import com.alibaba.middleware.race.index.BuyerIdRowIndex;
 import com.alibaba.middleware.race.index.HashIndex;
-import com.alibaba.middleware.race.index.OrderIdRowIndex;
+import com.alibaba.middleware.race.index.RecordIndex;
 import com.alibaba.middleware.race.index.RowIndex;
 import com.alibaba.middleware.race.store.PageStore;
 import com.alibaba.middleware.race.table.*;
@@ -27,8 +27,8 @@ public class WorkerManager implements Runnable {
 
     private final static String emptyLine = "";
     private final static Row emptyRow = new Row();
-    private final static OrderIdRowIndex emptyOrderIdRowIndex = new OrderIdRowIndex((byte)0, RowIndex.EMPTY_FLAG);
-    private final static BuyerIdRowIndex emptyBuyerIdRowIndex = new BuyerIdRowIndex((byte)0, RowIndex.EMPTY_FLAG);
+    private final static RowIndex emptyRowIndex = new RowIndex(new RecordIndex((byte)0, -1), 0);
+    private final static BuyerIdRowIndex emptyBuyerIdRowIndex = new BuyerIdRowIndex(new RecordIndex((byte)0, -1), 0, 0);
 
     public void setStoreFolders(Collection<String> storeFolders) {
         this.storeFolders = storeFolders;
@@ -147,35 +147,38 @@ public class WorkerManager implements Runnable {
 
     private void processOrderRecord() {
         OrderTable table = OrderTable.getInstance();
-        table.init(storeFolders);
+        table.init(storeFolders, orderFiles);
+        HashIndex goodIndexIndex = table.goodIndex.getIndex();
         HashIndex orderIndexIndex = table.orderIndex.getIndex();
         HashIndex buyerIndexIndex = table.buyerCreateTimeIndex.getIndex();
-        ArrayList<LinkedBlockingQueue<String>> inQueues = createQueues(PARSER_THREAD_NUM, IN_QUEUE_SIZE);
-        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(table.baseTable.getPageFiles().size(), OUT_QUEUE_SIZE);
-        ArrayList<LinkedBlockingQueue<OrderIdRowIndex>> orderIndexQueues
+        ArrayList<LinkedBlockingQueue<OrderLine>> inQueues = createQueues(PARSER_THREAD_NUM, IN_QUEUE_SIZE);
+        ArrayList<LinkedBlockingQueue<RowIndex>> goodIndexQueues
+                = createQueues(table.goodIndex.getPageFiles().size(), OUT_QUEUE_SIZE);
+        ArrayList<LinkedBlockingQueue<RowIndex>> orderIndexQueues
                 = createQueues(table.orderIndex.getPageFiles().size(), OUT_QUEUE_SIZE);
         ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexQueues
                 = createQueues(table.buyerCreateTimeIndex.getPageFiles().size(), OUT_QUEUE_SIZE);
-        ArrayList<Reader> readers = createReaders(orderFiles, inQueues);
-        ArrayList<Parser> parsers = createParser(inQueues, outQueues, table.baseTable);
-        ArrayList<OrderWriter> orderWriters = createOrderWriter(outQueues, table.baseTable,
-                orderIndexIndex, orderIndexQueues, buyerIndexIndex, buyerIndexQueues);
-        ArrayList<IndexWriter<OrderIdRowIndex>> orderIndexWriters = createIndexWriter(orderIndexQueues,
+        ArrayList<OrderReader> readers = createReaders(table.orderFilesMap, inQueues);
+        ArrayList<OrderParser> parsers = createOrderParser(inQueues, goodIndexQueues, orderIndexQueues, buyerIndexQueues,
+                goodIndexIndex, orderIndexIndex, buyerIndexIndex);
+        ArrayList<IndexWriter<RowIndex>> goodIndexWriters = createIndexWriter(goodIndexQueues,
+                table.goodIndex.getPageFiles(), goodIndexIndex);
+        ArrayList<IndexWriter<RowIndex>> orderIndexWriters = createIndexWriter(orderIndexQueues,
                 table.orderIndex.getPageFiles(), orderIndexIndex);
         ArrayList<IndexWriter<BuyerIdRowIndex>> buyerIndexWriters = createIndexWriter(buyerIndexQueues,
                 table.buyerCreateTimeIndex.getPageFiles(), buyerIndexIndex);
 
         ArrayList<Thread> readerThreads = new ArrayList<Thread>();
-        for (Reader reader: readers) {
+        for (OrderReader reader: readers) {
             readerThreads.add(new Thread(reader));
         }
         ArrayList<Thread> parserThreads = new ArrayList<Thread>();
-        for (Parser parser: parsers) {
+        for (OrderParser parser: parsers) {
             parserThreads.add(new Thread(parser));
         }
-        ArrayList<Thread> orderWriterThreads = new ArrayList<Thread>();
-        for (OrderWriter writer: orderWriters) {
-            orderWriterThreads.add(new Thread(writer));
+        ArrayList<Thread> goodIndexWriterThreads = new ArrayList<Thread>();
+        for (IndexWriter writer: goodIndexWriters) {
+            goodIndexWriterThreads.add(new Thread(writer));
         }
         ArrayList<Thread> orderIndexWriterThreads = new ArrayList<Thread>();
         for (IndexWriter writer: orderIndexWriters) {
@@ -188,7 +191,7 @@ public class WorkerManager implements Runnable {
 
         Metric metric = new Metric();
         addQueueToMetric(metric, "Order inQueue ", inQueues);
-        addQueueToMetric(metric, "Order outQueue ", outQueues);
+        addQueueToMetric(metric, "GoodIndex queue ", goodIndexQueues);
         addQueueToMetric(metric, "OrderIndex queue ", orderIndexQueues);
         addQueueToMetric(metric, "BuyerIndex queue ", buyerIndexQueues);
         metric.setSleepMills(MetricTime*6);
@@ -198,18 +201,18 @@ public class WorkerManager implements Runnable {
 
         startThreads(readerThreads);
         startThreads(parserThreads);
-        startThreads(orderWriterThreads);
+        startThreads(goodIndexWriterThreads);
         startThreads(orderIndexWriterThreads);
         startThreads(buyerIndexWriterThreads);
 
         waitThreads(readerThreads);
-        sendEndMsg(inQueues, emptyLine);
+        sendEndMsg(inQueues, new OrderLine(null, ""));
         waitThreads(parserThreads);
 
-        sendEndMsg(outQueues, emptyRow);
-        waitThreads(orderWriterThreads);
+        sendEndMsg(goodIndexQueues, emptyRowIndex);
+        waitThreads(goodIndexWriterThreads);
 
-        sendEndMsg(orderIndexQueues, emptyOrderIdRowIndex);
+        sendEndMsg(orderIndexQueues, emptyRowIndex);
         waitThreads(orderIndexWriterThreads);
 
         sendEndMsg(buyerIndexQueues, emptyBuyerIdRowIndex);
@@ -291,22 +294,6 @@ public class WorkerManager implements Runnable {
         return writers;
     }
 
-    private static ArrayList<OrderWriter> createOrderWriter(
-            ArrayList<LinkedBlockingQueue<Row>> outQueues, HashTable table,
-            HashIndex orderIndexIndex, ArrayList<LinkedBlockingQueue<OrderIdRowIndex>> orderIndexOut,
-            HashIndex buyerIndexIndex, ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexOut) {
-        ArrayList<OrderWriter> writers = new ArrayList<OrderWriter>();
-        int orderColumnId = table.getColumnId("orderid");
-        int buyerIdColumnId = table.getColumnId("buyerid");
-        int buyerCreateTimeColumnId = table.getColumnId("createtime");
-        for (int i=0; i< outQueues.size(); i++) {
-            writers.add(new OrderWriter(outQueues.get(i), table.getPageFiles().get(i), (byte)i, table.getIndex(),
-                    orderIndexIndex, orderIndexOut, buyerIndexIndex, buyerIndexOut,
-                    orderColumnId, buyerIdColumnId, buyerCreateTimeColumnId));
-        }
-        return writers;
-    }
-
     private static <T extends RowIndex> ArrayList<IndexWriter<T>> createIndexWriter(
             ArrayList<LinkedBlockingQueue<T>> outQueues, ArrayList<PageStore> pageFiles, HashIndex index) {
         ArrayList<IndexWriter<T>> writers = new ArrayList<IndexWriter<T>>();
@@ -322,5 +309,37 @@ public class WorkerManager implements Runnable {
             addQueues.add(queue);
         }
         metric.addQueue(name, addQueues);
+    }
+
+    private static ArrayList<OrderReader> createReaders(Map<String, Byte> files,
+                                                   ArrayList<LinkedBlockingQueue<OrderLine>> inQueues) {
+        HashMap<String, HashMap<String, Byte>> fileSplits = new HashMap<String, HashMap<String, Byte>>(3);
+        for (Map.Entry<String, Byte> file: files.entrySet()) {
+            String fileName = file.getKey();
+            String prefix = fileName.substring(0, fileName.lastIndexOf('/'));
+            if (!fileSplits.containsKey(prefix)) {
+                fileSplits.put(prefix, new HashMap<String, Byte>());
+            }
+            fileSplits.get(prefix).put(fileName, file.getValue());
+        }
+        ArrayList<OrderReader> readers = new ArrayList<OrderReader>();
+        for (Map.Entry<String, HashMap<String, Byte>> entry: fileSplits.entrySet()) {
+            readers.add(new OrderReader(entry.getValue(), inQueues));
+        }
+        return readers;
+    }
+
+    private static ArrayList<OrderParser> createOrderParser(ArrayList<LinkedBlockingQueue<OrderLine>> inQueues,
+                                                       ArrayList<LinkedBlockingQueue<RowIndex>> goodOIndexQueues,
+                                                       ArrayList<LinkedBlockingQueue<RowIndex>> orderIndexQueues,
+                                                       ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexQueues,
+                                                       HashIndex goodIndexIndex, HashIndex orderIndexIndex,
+                                                       HashIndex buyerIndexIndex) {
+        ArrayList<OrderParser> parsers = new ArrayList<OrderParser>();
+        for (LinkedBlockingQueue<OrderLine> queue: inQueues) {
+            parsers.add(new OrderParser(queue, goodOIndexQueues, orderIndexQueues,buyerIndexQueues,
+                    goodIndexIndex, orderIndexIndex, buyerIndexIndex));
+        }
+        return parsers;
     }
 }

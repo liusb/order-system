@@ -23,7 +23,7 @@ public class IndexWriter<T extends RowIndex> implements Runnable {
         this.row = null;
         this.pageFile = pageFile;
         this.index = index;
-        this.buffer = new Data(new byte[512]);
+        this.buffer = new Data(new byte[13]);
         this.inCount = 0;
         this.threadId = 0;
     }
@@ -42,15 +42,19 @@ public class IndexWriter<T extends RowIndex> implements Runnable {
         }
     }
 
+
     @Override
     public void run() {
         this.threadId = Thread.currentThread().getId();
         while (true) {
             this.nextRow();
-            if(row.isEmpty()) {
+            if(row.getRecodeIndex().getFileId()==-1) {
                 break;
             }
-            row.writeToBuffer(buffer);
+            buffer.reset();
+            buffer.writeInt(row.getHashCode());
+            buffer.writeByte(row.getRecodeIndex().getFileId());
+            buffer.writeLong(row.getRecodeIndex().getAddress());
             int bucketId = index.getBucketId(row.getHashCode());
             pageFile.insertIndexData(bucketId, buffer);
             inCount++;
