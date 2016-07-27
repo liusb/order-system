@@ -58,6 +58,14 @@ public class FileStore {
         fileLength = Math.max(posInFile, fileLength);
     }
 
+    public void aioWrite(byte[] b, long posInFile) {
+        //file.writeFully(ByteBuffer.wrap(b, off, len));
+        ByteBuffer byteBuffer = ByteBuffer.allocateDirect(b.length);
+        byteBuffer.put(b);
+        byteBuffer.flip();
+        file.aioWrite(byteBuffer, posInFile);
+    }
+
     public void setLength(long newLength) {
         try {
             if (newLength > fileLength) {

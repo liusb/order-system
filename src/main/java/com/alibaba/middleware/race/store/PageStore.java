@@ -34,7 +34,7 @@ public class PageStore implements CacheWriter {
             this.cache = new CacheLRU(this, cacheSize, pageSize);
             if (mode.equals("rw")) {
                 this.usedSet = new BitSet(bucketSize);  // 初始化为bucketSize大小，然后随着页的分配增加
-                this.file.setLength(((long)bucketSize)*pageSize*100);  // 需要预估计分配大小，应该比所有桶大小更大
+                this.file.setLength(((long)bucketSize)*pageSize*42);  // 需要预估计分配大小，应该比所有桶大小更大
             }
         }catch (Exception e) {
             e.printStackTrace();
@@ -124,7 +124,7 @@ public class PageStore implements CacheWriter {
         Data oldData = oldPage.getData();
         // 修改旧页的下一页表项, 将该页写入文件
         oldPage.setNextPage(newPageId);
-        this.writeBack(oldPage);
+        this.aioWrite(oldPage);
         if (bucketId == oldPage.getPageId()) { // 桶中第一个页溢出
             // 将该页从缓存链表中移出
             cache.removeData(oldPage);
@@ -208,6 +208,15 @@ public class PageStore implements CacheWriter {
         page.setChanged(false);
     }
 
+    public void aioWrite(HashDataPage page) {
+        Data data = page.getData();
+        int dataLen = data.getPos();
+        page.setDataLen(dataLen);
+        page.writeHeader();
+        long writePos = ((long)page.getPos())*pageSize;
+        file.aioWrite(data.getBytes(), writePos);
+        page.setChanged(false);
+    }
 
 
     public long FileCheck() {

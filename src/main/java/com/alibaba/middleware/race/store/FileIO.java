@@ -5,17 +5,41 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousFileChannel;
+import java.nio.channels.CompletionHandler;
 import java.nio.channels.FileLock;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 
 public class FileIO {
     private final RandomAccessFile file;
+    private AsynchronousFileChannel channel;
+    private CompletionHandler handler;
 
     FileIO(String fileName, String mode) throws FileNotFoundException {
         this.file = new RandomAccessFile(fileName, mode);
+        try {
+            this.channel = AsynchronousFileChannel.open(Paths.get(fileName), StandardOpenOption.WRITE);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        this.handler = new CompletionHandler<Integer, ByteBuffer>() {
+            @Override
+            public void completed(Integer result, ByteBuffer attachment) {
+                //System.out.println(attachment + " completed and " + result + " bytes are written.");
+            }
+
+            @Override
+            public void failed(Throwable e, ByteBuffer attachment) {
+                System.out.println(attachment + " aio write failed with exception:");
+                e.printStackTrace();
+            }
+        };
     }
 
     public void close() throws IOException {
         this.file.close();
+        this.channel.close();
     }
 
     public long position() throws IOException {
@@ -70,5 +94,9 @@ public class FileIO {
         do {
             write(src);
         } while (src.remaining() > 0);
+    }
+
+    public void aioWrite(ByteBuffer src, long pos) {
+        channel.write(src, pos, src, handler);
     }
 }
