@@ -15,10 +15,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class WorkerManager implements Runnable {
 
-    private static final int PARSER_THREAD_NUM = 16;
-    private static final int IN_QUEUE_SIZE = 42;
-    private static final int OUT_QUEUE_SIZE = 64;
-    private static final int MetricTime = 10000;
+    private static final int PARSER_THREAD_NUM = 10;
+    private static final int IN_QUEUE_SIZE = 1024;
+    private static final int OUT_QUEUE_SIZE = 16*1024;
+    private static final int MetricTime = 5000;
 
     private Collection<String> storeFolders;
     private Collection<String> orderFiles;
@@ -151,11 +151,11 @@ public class WorkerManager implements Runnable {
         HashIndex orderIndexIndex = table.orderIndex.getIndex();
         HashIndex buyerIndexIndex = table.buyerCreateTimeIndex.getIndex();
         ArrayList<LinkedBlockingQueue<String>> inQueues = createQueues(PARSER_THREAD_NUM, IN_QUEUE_SIZE);
-        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(table.baseTable.getPageFiles().size(), 2*OUT_QUEUE_SIZE);
+        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(table.baseTable.getPageFiles().size(), OUT_QUEUE_SIZE);
         ArrayList<LinkedBlockingQueue<OrderIdRowIndex>> orderIndexQueues
-                = createQueues(table.orderIndex.getPageFiles().size(), 2*OUT_QUEUE_SIZE);
+                = createQueues(table.orderIndex.getPageFiles().size(), OUT_QUEUE_SIZE);
         ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexQueues
-                = createQueues(table.buyerCreateTimeIndex.getPageFiles().size(), 2*OUT_QUEUE_SIZE);
+                = createQueues(table.buyerCreateTimeIndex.getPageFiles().size(), OUT_QUEUE_SIZE);
         ArrayList<Reader> readers = createReaders(orderFiles, inQueues);
         ArrayList<Parser> parsers = createParser(inQueues, outQueues, table.baseTable);
         ArrayList<OrderWriter> orderWriters = createOrderWriter(outQueues, table.baseTable,
