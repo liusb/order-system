@@ -2,7 +2,6 @@ package com.alibaba.middleware.race.table;
 
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.TreeMap;
 
 public class BuyerTable {
     private static BuyerTable instance = new BuyerTable();
@@ -18,7 +17,7 @@ public class BuyerTable {
 
     private static final int TABLE_BUCKET_SIZE = 256*(1<<10);
     private static final int TABLE_CACHE_SIZE = 256*(1<<10);
-    private static final int REOPEN_TABLE_CACHE_SIZE = 4*(1<<10);
+    private static final int REOPEN_TABLE_CACHE_SIZE = 32*(1<<10);
     // 每页的大小，单位为byte
     private static final int TABLE_PAGE_SIZE = 4*(1<<10);
     private static final String[] TABLE_COLUMNS = {"buyerid"};
@@ -37,10 +36,6 @@ public class BuyerTable {
         this.baseTable.reopen(REOPEN_TABLE_CACHE_SIZE);
     }
 
-    public HashMap<String, Object> find(String buyerId, TreeMap<Integer, String> keys) {
-        HashMap<String, Object> result = new HashMap<String, Object>();
-        return result;
-    }
 
     public HashMap<String, Object> find(String buyerId) {
         return this.baseTable.findRecord(buyerId);

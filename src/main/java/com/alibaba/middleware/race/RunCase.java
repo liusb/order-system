@@ -57,7 +57,7 @@ public class RunCase {
         Iterator<OrderSystem.Result> resultIterator;
         for (int i=0; i<caseFileLimit; i++) {
             LineReader lineReader = new LineReader("./prerun_data/case/case.1."+i);
-            System.out.println("正在评测的文件为：case.0." +i);
+            System.out.println("正在评测的文件为：case.1." +i);
             while (true) {
                 line = lineReader.nextLine();
                 if (line == null) {

@@ -1,9 +1,6 @@
 package com.alibaba.middleware.race.worker;
 
-import com.alibaba.middleware.race.index.BuyerIdRowIndex;
-import com.alibaba.middleware.race.index.HashIndex;
-import com.alibaba.middleware.race.index.RecordIndex;
-import com.alibaba.middleware.race.index.RowIndex;
+import com.alibaba.middleware.race.index.*;
 import com.alibaba.middleware.race.store.PageStore;
 import com.alibaba.middleware.race.table.*;
 
@@ -13,7 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class WorkerManager implements Runnable {
+public class WorkerManager {
 
     private static final int PARSER_THREAD_NUM = 10;
     private static final int IN_QUEUE_SIZE = 1024;
@@ -27,8 +24,12 @@ public class WorkerManager implements Runnable {
 
     private final static String emptyLine = "";
     private final static Row emptyRow = new Row();
-    private final static RowIndex emptyRowIndex = new RowIndex(new RecordIndex((byte)0, -1), 0);
-    private final static BuyerIdRowIndex emptyBuyerIdRowIndex = new BuyerIdRowIndex(new RecordIndex((byte)0, -1), 0, 0);
+    private final static GoodIdRowIndex emptyGoodIdRowIndex
+            = new GoodIdRowIndex(new RecordIndex((byte)0, -1), 0, "");
+    private final static OrderIdRowIndex emptyOrderIdRowIndex
+            = new OrderIdRowIndex(new RecordIndex((byte)0, -1), 0, 0);
+    private final static BuyerIdRowIndex emptyBuyerIdRowIndex
+            = new BuyerIdRowIndex(new RecordIndex((byte)0, -1), 0, "", 0);
 
     public void setStoreFolders(Collection<String> storeFolders) {
         this.storeFolders = storeFolders;
@@ -46,7 +47,6 @@ public class WorkerManager implements Runnable {
         this.goodFiles = goodFiles;
     }
 
-    @Override
     public void run() {
         long beginTime = System.currentTimeMillis();
         processGoodRecord();
@@ -152,18 +152,18 @@ public class WorkerManager implements Runnable {
         HashIndex orderIndexIndex = table.orderIndex.getIndex();
         HashIndex buyerIndexIndex = table.buyerIndex.getIndex();
         ArrayList<LinkedBlockingQueue<OrderLine>> inQueues = createQueues(PARSER_THREAD_NUM, IN_QUEUE_SIZE);
-        ArrayList<LinkedBlockingQueue<RowIndex>> goodIndexQueues
+        ArrayList<LinkedBlockingQueue<GoodIdRowIndex>> goodIndexQueues
                 = createQueues(table.goodIndex.getPageFiles().size(), OUT_QUEUE_SIZE);
-        ArrayList<LinkedBlockingQueue<RowIndex>> orderIndexQueues
+        ArrayList<LinkedBlockingQueue<OrderIdRowIndex>> orderIndexQueues
                 = createQueues(table.orderIndex.getPageFiles().size(), OUT_QUEUE_SIZE);
         ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexQueues
                 = createQueues(table.buyerIndex.getPageFiles().size(), OUT_QUEUE_SIZE);
         ArrayList<OrderReader> readers = createReaders(table.orderFilesMap, inQueues);
         ArrayList<OrderParser> parsers = createOrderParser(inQueues, goodIndexQueues, orderIndexQueues, buyerIndexQueues,
                 goodIndexIndex, orderIndexIndex, buyerIndexIndex);
-        ArrayList<IndexWriter<RowIndex>> goodIndexWriters = createIndexWriter(goodIndexQueues,
+        ArrayList<IndexWriter<GoodIdRowIndex>> goodIndexWriters = createIndexWriter(goodIndexQueues,
                 table.goodIndex.getPageFiles(), goodIndexIndex);
-        ArrayList<IndexWriter<RowIndex>> orderIndexWriters = createIndexWriter(orderIndexQueues,
+        ArrayList<IndexWriter<OrderIdRowIndex>> orderIndexWriters = createIndexWriter(orderIndexQueues,
                 table.orderIndex.getPageFiles(), orderIndexIndex);
         ArrayList<IndexWriter<BuyerIdRowIndex>> buyerIndexWriters = createIndexWriter(buyerIndexQueues,
                 table.buyerIndex.getPageFiles(), buyerIndexIndex);
@@ -209,10 +209,10 @@ public class WorkerManager implements Runnable {
         sendEndMsg(inQueues, new OrderLine(null, ""));
         waitThreads(parserThreads);
 
-        sendEndMsg(goodIndexQueues, emptyRowIndex);
+        sendEndMsg(goodIndexQueues, emptyGoodIdRowIndex);
         waitThreads(goodIndexWriterThreads);
 
-        sendEndMsg(orderIndexQueues, emptyRowIndex);
+        sendEndMsg(orderIndexQueues, emptyOrderIdRowIndex);
         waitThreads(orderIndexWriterThreads);
 
         sendEndMsg(buyerIndexQueues, emptyBuyerIdRowIndex);
@@ -330,8 +330,8 @@ public class WorkerManager implements Runnable {
     }
 
     private static ArrayList<OrderParser> createOrderParser(ArrayList<LinkedBlockingQueue<OrderLine>> inQueues,
-                                                       ArrayList<LinkedBlockingQueue<RowIndex>> goodOIndexQueues,
-                                                       ArrayList<LinkedBlockingQueue<RowIndex>> orderIndexQueues,
+                                                       ArrayList<LinkedBlockingQueue<GoodIdRowIndex>> goodOIndexQueues,
+                                                       ArrayList<LinkedBlockingQueue<OrderIdRowIndex>> orderIndexQueues,
                                                        ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexQueues,
                                                        HashIndex goodIndexIndex, HashIndex orderIndexIndex,
                                                        HashIndex buyerIndexIndex) {

@@ -35,21 +35,21 @@ public class OrderReader implements Runnable {
                 FileChannel fileChannel = new RandomAccessFile(entry.getKey(), "r").getChannel();
                 long fileSize = fileChannel.size();
                 byte fileId = entry.getValue();
+                byte[] strBuffer = new byte[1024];
+                int posInStrBuffer = 0;
                 int mapTime = (int)((fileSize-1)>>30)+1;
                 for (int j=0; j < mapTime; j++) {
                     long mapSize = Math.min((1<<30), fileSize-(j*(1<<30)));
                     long mapBegin = j*(1<<30);
                     MappedByteBuffer buffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, mapBegin, mapSize);
-                    byte[] strBuffer = new byte[1024];
-                    int posInStrBuffer = 0;
-                    byte ch;
                     String line;
                     for (int posInMap = 0; posInMap < mapSize; posInMap++) {
-                        ch = buffer.get();
+                        byte ch = buffer.get();
                         if (ch == '\n') {
                             line = new String(strBuffer, 0, posInStrBuffer);
-                            OrderLine orderLine = new OrderLine(new RecordIndex(fileId, mapBegin+posInMap-posInStrBuffer), line);
-                            posInStrBuffer=0;
+                            OrderLine orderLine = new OrderLine(new RecordIndex(fileId,
+                                    mapBegin+posInMap-posInStrBuffer), line);
+                            posInStrBuffer=0;  // 重置pos
                             while (true) {
                                 try {
                                     for (i = 1; i < 16; i++) {

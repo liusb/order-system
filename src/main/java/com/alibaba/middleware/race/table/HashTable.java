@@ -1,10 +1,8 @@
 package com.alibaba.middleware.race.table;
 
 import com.alibaba.middleware.race.cache.SafeData;
-import com.alibaba.middleware.race.index.BuyerIdRowIndex;
 import com.alibaba.middleware.race.index.HashIndex;
 import com.alibaba.middleware.race.index.RecordIndex;
-import com.alibaba.middleware.race.index.RowIndex;
 import com.alibaba.middleware.race.store.Data;
 import com.alibaba.middleware.race.store.HashDataPage;
 import com.alibaba.middleware.race.store.PageStore;
@@ -28,10 +26,10 @@ public class HashTable extends Table {
     public void init(Collection<String> storeFolders, int bucketSize,
                      int cacheSize, int pageSize) {
         for (String folder: storeFolders) {
-            PageStore pageStore = new PageStore(folder + "/" + this.name + ".db",
-                    bucketSize, pageSize);
-            pageStore.open("rw", cacheSize);
             this.pageSize = pageSize;
+            PageStore pageStore = new PageStore(folder + "/" + this.name + ".db",
+                    bucketSize, this.pageSize);
+            pageStore.open("rw", cacheSize);
             this.storeFiles.add(pageStore);
         }
         this.index = new HashIndex(bucketSize, this.storeFiles.size());
@@ -138,9 +136,9 @@ public class HashTable extends Table {
         }
     }
 
-    public ArrayList<RecordIndex> findIndex(String gooodId) {
+    public ArrayList<RecordIndex> findIndex(String goodId) {
         ArrayList<RecordIndex> results = new ArrayList<RecordIndex>();
-        int hashCode = HashIndex.getHashCode(gooodId);
+        int hashCode = HashIndex.getHashCode(goodId);
         PageStore pageStore = storeFiles.get(index.getFileIndex(hashCode));
         int bucketIndex = index.getBucketId(hashCode);
         if (!pageStore.isBucketUsed(bucketIndex)) {
@@ -153,18 +151,18 @@ public class HashTable extends Table {
         while (true) {
             page = pageStore.getPage(bucketIndex);
             data = new Data(page.getData().getBytes(), HashDataPage.HeaderLength);
-            // [hashCode(int), buyerId(len,string), createTime(long), fileId(byte), address(long)]
+            // [hashCode(int), goodId(len,string), fileId(byte), address(long)]
             while (data.getPos() < page.getDataLen()) {
                 readHashCode = data.readInt();
                 if (readHashCode != hashCode) {
-                    data.skip(data.readInt() + 8 + 1 + 8);
+                    data.skip(data.readInt() + 1 + 8);
                 } else {
                     readString = data.readString();
-                    if (readString.equals(gooodId)) {
+                    if (readString.equals(goodId)) {
                         RecordIndex result = new RecordIndex(data.readByte(), data.readLong());
                         results.add(result);
                     } else {
-                        data.skip(8+1+8);
+                        data.skip(1+8);
                     }
                 }
             }

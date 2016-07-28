@@ -1,8 +1,6 @@
 package com.alibaba.middleware.race.worker;
 
-import com.alibaba.middleware.race.index.BuyerIdRowIndex;
-import com.alibaba.middleware.race.index.HashIndex;
-import com.alibaba.middleware.race.index.RowIndex;
+import com.alibaba.middleware.race.index.*;
 import com.alibaba.middleware.race.table.OrderLine;
 
 import java.util.ArrayList;
@@ -12,8 +10,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class OrderParser implements Runnable {
     private LinkedBlockingQueue<OrderLine> in;
     private OrderLine line;
-    private ArrayList<LinkedBlockingQueue<RowIndex>> goodIndexOuts;
-    private ArrayList<LinkedBlockingQueue<RowIndex>> orderIndexOuts;
+    private ArrayList<LinkedBlockingQueue<GoodIdRowIndex>> goodIndexOuts;
+    private ArrayList<LinkedBlockingQueue<OrderIdRowIndex>> orderIndexOuts;
     private ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexOuts;
     private HashIndex goodIndexIndex;
     private HashIndex orderIndexIndex;
@@ -22,8 +20,8 @@ public class OrderParser implements Runnable {
     private long threadId;
 
     public OrderParser(LinkedBlockingQueue<OrderLine> inQueue,
-                       ArrayList<LinkedBlockingQueue<RowIndex>> goodOIndexQueues,
-                       ArrayList<LinkedBlockingQueue<RowIndex>> orderIndexQueues,
+                       ArrayList<LinkedBlockingQueue<GoodIdRowIndex>> goodOIndexQueues,
+                       ArrayList<LinkedBlockingQueue<OrderIdRowIndex>> orderIndexQueues,
                        ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexQueues,
                        HashIndex goodIndexIndex, HashIndex orderIndexIndex,
                        HashIndex buyerIndexIndex) {
@@ -90,9 +88,9 @@ public class OrderParser implements Runnable {
             int goodHash = HashIndex.getHashCode(goodId);
             int orderHash = HashIndex.getHashCode(orderId);
             int buyerHash = HashIndex.getHashCode(buyerId);
-            RowIndex goodRowIndex = new RowIndex(line.getRecodeIndex(), goodHash);
-            RowIndex orrderRowIndex = new RowIndex(line.getRecodeIndex(), orderHash);
-            BuyerIdRowIndex buyerIdRowIndex =  new BuyerIdRowIndex(line.getRecodeIndex(), buyerHash, createTime);
+            GoodIdRowIndex goodRowIndex = new GoodIdRowIndex(line.getRecodeIndex(), goodHash, goodId);
+            OrderIdRowIndex orderRowIndex = new OrderIdRowIndex(line.getRecodeIndex(), orderHash, orderId);
+            BuyerIdRowIndex buyerIdRowIndex =  new BuyerIdRowIndex(line.getRecodeIndex(), buyerHash, buyerId, createTime);
             while (true) {
                 try {
                     goodIndexOuts.get(goodIndexIndex.getFileIndex(goodHash)).put(goodRowIndex);
@@ -103,7 +101,7 @@ public class OrderParser implements Runnable {
             }
             while (true) {
                 try {
-                    orderIndexOuts.get(orderIndexIndex.getFileIndex(orderHash)).put(orrderRowIndex);
+                    orderIndexOuts.get(orderIndexIndex.getFileIndex(orderHash)).put(orderRowIndex);
                     break;
                 } catch (InterruptedException e) {
                     e.printStackTrace();

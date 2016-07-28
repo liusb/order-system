@@ -28,7 +28,7 @@ public class SystemCheck {
         }
         System.out.println("========================total Count:" + totalCount);
         totalCount = 0;
-        for (PageStore pageFile: OrderTable.getInstance().baseTable.getPageFiles()) {
+        for (PageStore pageFile: OrderTable.getInstance().goodIndex.getPageFiles()) {
             totalCount += pageFile.FileCheck();
         }
         System.out.println("========================total Count:" + totalCount);

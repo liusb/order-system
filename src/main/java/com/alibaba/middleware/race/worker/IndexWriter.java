@@ -1,7 +1,6 @@
 package com.alibaba.middleware.race.worker;
 
-import com.alibaba.middleware.race.index.HashIndex;
-import com.alibaba.middleware.race.index.RowIndex;
+import com.alibaba.middleware.race.index.*;
 import com.alibaba.middleware.race.store.Data;
 import com.alibaba.middleware.race.store.PageStore;
 
@@ -23,7 +22,7 @@ public class IndexWriter<T extends RowIndex> implements Runnable {
         this.row = null;
         this.pageFile = pageFile;
         this.index = index;
-        this.buffer = new Data(new byte[13]);
+        this.buffer = new Data(new byte[256]);
         this.inCount = 0;
         this.threadId = 0;
     }
@@ -42,6 +41,29 @@ public class IndexWriter<T extends RowIndex> implements Runnable {
         }
     }
 
+    private void writeToBuffer(RecordIndex recordIndex) {
+        buffer.writeByte(recordIndex.getFileId());
+        buffer.writeLong(recordIndex.getAddress());
+    }
+
+    private void writeToBuffer(GoodIdRowIndex goodIdRowIndex) {
+        buffer.writeInt(goodIdRowIndex.getHashCode());
+        buffer.writeString(goodIdRowIndex.getGoodId());
+        writeToBuffer(goodIdRowIndex.getRecodeIndex());
+    }
+
+    private void writeToBuffer(OrderIdRowIndex orderIdRowIndex) {
+        buffer.writeLong(orderIdRowIndex.getOrderId());
+        writeToBuffer(orderIdRowIndex.getRecodeIndex());
+    }
+
+    private void writeToBuffer(BuyerIdRowIndex buyerIdRowIndex) {
+        buffer.writeInt(buyerIdRowIndex.getHashCode());
+        buffer.writeString(buyerIdRowIndex.getBuyerId());
+        buffer.writeLong(buyerIdRowIndex.getCreateTime());
+        writeToBuffer(buyerIdRowIndex.getRecodeIndex());
+    }
+
 
     @Override
     public void run() {
@@ -52,14 +74,12 @@ public class IndexWriter<T extends RowIndex> implements Runnable {
                 break;
             }
             buffer.reset();
-            if (row instanceof RowIndex) {
-                buffer.writeInt(row.getHashCode());
-                buffer.writeByte(row.getRecodeIndex().getFileId());
-                buffer.writeLong(row.getRecodeIndex().getAddress());
+            if (row instanceof GoodIdRowIndex) {
+                writeToBuffer((GoodIdRowIndex)row);
+            } else if (row instanceof OrderIdRowIndex) {
+                writeToBuffer((OrderIdRowIndex) row);
             } else {
-                buffer.writeInt(row.getHashCode());
-                buffer.writeByte(row.getRecodeIndex().getFileId());
-                buffer.writeLong(row.getRecodeIndex().getAddress());
+                writeToBuffer((BuyerIdRowIndex) row);
             }
             int bucketId = index.getBucketId(row.getHashCode());
             pageFile.insertIndexData(bucketId, buffer);

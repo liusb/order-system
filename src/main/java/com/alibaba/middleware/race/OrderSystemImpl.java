@@ -1,8 +1,6 @@
 package com.alibaba.middleware.race;
 
-import com.alibaba.middleware.race.index.BuyerIdRowIndex;
 import com.alibaba.middleware.race.index.RecordIndex;
-import com.alibaba.middleware.race.index.RowIndex;
 import com.alibaba.middleware.race.result.KVImpl;
 import com.alibaba.middleware.race.result.ResultImpl;
 import com.alibaba.middleware.race.result.ResultIterator;
@@ -20,25 +18,6 @@ import java.util.*;
  */
 public class OrderSystemImpl implements OrderSystem {
 
-//    private HashMap<String, Column> orderColumns = new HashMap<String, Column>();
-//    private HashMap<String, Column> goodColumns = new HashMap<String, Column>();
-//    private HashMap<String, Column> buyerColumns = new HashMap<String, Column>();
-
-    /*
-    1. 建立存储处理后数据需要的相关文件
-       文件份为以下三种：
-       a. 按照GoodId的Hash值存储的Good.db
-       b. 按照BuyerId的Hash值存储的Buyer.db
-       c. 按照BuyerId, OrderTime顺序存储的Order.db
-    2. 先处理商品文件，再处理买家文件，最后处理订单文件
-
-    3. 商品文件/买家文件
-       读入原始文件 --> 对goodId/buyerId进行hash  -> 存入相应的块中
-
-    4. 订单文件
-       读入原始文件
-
-     */
     public void construct(Collection<String> orderFiles,
                           Collection<String> buyerFiles, Collection<String> goodFiles,
                           Collection<String> storeFolders) throws IOException, InterruptedException {
@@ -48,25 +27,11 @@ public class OrderSystemImpl implements OrderSystem {
         manager.setGoodFiles(goodFiles);
         manager.setOrderFiles(orderFiles);
 
-//        printDir(orderFiles, "orderFiles");
-//        printDir(buyerFiles, "buyerFiles");
-//        printDir(goodFiles, "goodFiles");
-//        printDir(storeFolders, "storeFolders");
-
-        Thread managerThread = new Thread(manager);
-        managerThread.setDaemon(true);
-        managerThread.start();
-        long beginTime = System.currentTimeMillis();
-        while (!OrderTable.getInstance().isPrepared()) {
-            if ((System.currentTimeMillis()-beginTime) > 58*60000) {
-                break;
-            }
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
+        printDir(orderFiles, "orderFiles");
+        printDir(buyerFiles, "buyerFiles");
+        printDir(goodFiles, "goodFiles");
+        printDir(storeFolders, "storeFolders");
+        manager.run();
     }
 
     private void printDir(Collection<String> dir, String name) {
@@ -90,13 +55,6 @@ public class OrderSystemImpl implements OrderSystem {
      * @return 查询结果，如果该订单不存在，返回null
      */
     public Result queryOrder(long orderId, Collection<String> keys) {
-        while (!OrderTable.getInstance().isPrepared()) {
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
         TreeMap<Integer, String> goodKeys = null;
         TreeMap<Integer, String> buyerKeys = null;
         if (keys != null) {
@@ -109,29 +67,11 @@ public class OrderSystemImpl implements OrderSystem {
         if (orderIdRowIndex == null) {
             return null;
         }
-        HashMap<String, Object> orderRecord = OrderTable.getInstance().findOrder(orderIdRowIndex);
-//        if (orderRecord.isEmpty()) {
-//            throw new RuntimeException("找到了索引找不到记录");
-//        }
-//        for (Map.Entry<String, Object> kv : orderRecord.entrySet()) {
-//            System.out.println(kv.toString().replace("=", ":"));
-//        }
-        String buyerId = ((String) orderRecord.get("buyerid"));
+        HashMap<String, String> orderRecord = OrderTable.getInstance().findOrder(orderIdRowIndex);
+        String buyerId = orderRecord.get("buyerid");
         HashMap<String, Object> buyerRecord = BuyerTable.getInstance().find(buyerId);
-//        if (buyerRecord.isEmpty()) {
-//            throw new RuntimeException("找不到买家记录");
-//        }
-//        for (Map.Entry<String, Object> kv : buyerRecord.entrySet()) {
-//            System.out.println(kv.toString().replace("=", ":"));
-//        }
-        String goodId = ((String) orderRecord.get("goodid"));
+        String goodId = orderRecord.get("goodid");
         HashMap<String, Object> goodRecord = GoodTable.getInstance().find(goodId);
-//        if (goodRecord.isEmpty()) {
-//            throw new RuntimeException("找不到商品记录");
-//        }
-//        for (Map.Entry<String, Object> kv : goodRecord.entrySet()) {
-//            System.out.println(kv.toString().replace("=", ":"));
-//        }
         HashMap<String, KVImpl> result;
         if (keys == null) {
             result = joinResult(orderRecord, buyerRecord, goodRecord);
@@ -151,7 +91,7 @@ public class OrderSystemImpl implements OrderSystem {
                 }
             }
         }
-        return new ResultImpl(((Long) orderRecord.get("orderid")), result);
+        return new ResultImpl(orderId, result);
     }
 
     /**
@@ -165,23 +105,17 @@ public class OrderSystemImpl implements OrderSystem {
      */
     public Iterator<Result> queryOrdersByBuyer(long startTime, long endTime,
       String buyerId) {
-        while (!OrderTable.getInstance().isPrepared()) {
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
         ArrayList<ResultImpl> results = new ArrayList<ResultImpl>();
         ArrayList<RecordIndex> buyerIdRowIndices = OrderTable.getInstance()
                 .findBuyerIdIndex(buyerId, startTime, endTime);
         HashMap<String, Object> buyerRecord = BuyerTable.getInstance().find(buyerId);
-        ArrayList<HashMap<String, Object>>  orderRecords = OrderTable.getInstance().findOrders(buyerIdRowIndices);
-        for (HashMap<String, Object> order : orderRecords) {
-            String goodId = ((String) order.get("goodid"));
+        ArrayList<HashMap<String, String>>  orderRecords = OrderTable.getInstance().findOrders(buyerIdRowIndices);
+        for (HashMap<String, String> order : orderRecords) {
+            String goodId = order.get("goodid");
             HashMap<String, Object> goodRecord = GoodTable.getInstance().find(goodId);
             HashMap<String, KVImpl> result = joinResult(order, buyerRecord, goodRecord);
-            results.add(new ResultImpl(((Long) order.get("orderid")), result, ((Long) order.get("createtime"))));
+            results.add(new ResultImpl(Long.parseLong(order.get("orderid")),
+                    result, Long.parseLong(order.get("createtime"))));
         }
         return new ResultIterator(results);
     }
@@ -196,20 +130,13 @@ public class OrderSystemImpl implements OrderSystem {
      */
     public Iterator<Result> queryOrdersBySaler(String salerId, String goodId,
       Collection<String> keys) {
-        while (!OrderTable.getInstance().isPrepared()) {
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
         ArrayList<ResultImpl> results = new ArrayList<ResultImpl>();
         HashMap<String, Object> goodRecord = GoodTable.getInstance().find(goodId);
 
         ArrayList<RecordIndex> goodRowIndex = OrderTable.getInstance().findGoodIdIndex(goodId);
-        ArrayList<HashMap<String, Object>>  orderRecords = OrderTable.getInstance().findOrders(goodRowIndex);
-        for (HashMap<String, Object> order : orderRecords) {
-            String buyerId = ((String) order.get("buyerid"));
+        ArrayList<HashMap<String, String>>  orderRecords = OrderTable.getInstance().findOrders(goodRowIndex);
+        for (HashMap<String, String> order : orderRecords) {
+            String buyerId = order.get("buyerid");
             HashMap<String, Object> buyerRecord = BuyerTable.getInstance().find(buyerId);
             HashMap<String, KVImpl> result;
             if (keys == null) {
@@ -230,7 +157,7 @@ public class OrderSystemImpl implements OrderSystem {
                     }
                 }
             }
-            results.add(new ResultImpl(((Long) order.get("orderid")), result));
+            results.add(new ResultImpl(Long.parseLong(order.get("orderid")), result));
         }
         return new ResultIterator(results);
     }
@@ -244,26 +171,19 @@ public class OrderSystemImpl implements OrderSystem {
      * @return 求和结果
      */
     public KeyValue sumOrdersByGood(String goodId, String key) {
-        while (!OrderTable.getInstance().isPrepared()) {
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
         long sumLong = 0;
         double sumDouble = 0.0;
         boolean hasLong = false;
         boolean hasDouble = false;
         ArrayList<RecordIndex> goodRowIndex = OrderTable.getInstance().findGoodIdIndex(goodId);
-        ArrayList<HashMap<String, Object>>  orderRecords = OrderTable.getInstance().findOrders(goodRowIndex);
+        ArrayList<HashMap<String, String>>  orderRecords = OrderTable.getInstance().findOrders(goodRowIndex);
         HashMap<String, Object> goodRecord = GoodTable.getInstance().find(goodId);
-        for (HashMap<String, Object> order : orderRecords) {
+        for (HashMap<String, String> order : orderRecords) {
             Object value = order.get(key);
             if (value == null) {
                 value = goodRecord.get(key);
                 if (value == null) {
-                    String buyerId = ((String) order.get("buyerid"));
+                    String buyerId = order.get("buyerid");
                     HashMap<String, Object> buyerRecord = BuyerTable.getInstance().find(buyerId);
                     value = buyerRecord.get(key);
                 }
@@ -303,11 +223,11 @@ public class OrderSystemImpl implements OrderSystem {
         }
     }
 
-    private HashMap<String, KVImpl> joinResult(HashMap<String, Object> orderRecord,
+    private HashMap<String, KVImpl> joinResult(HashMap<String, String> orderRecord,
                                                  HashMap<String, Object> buyerRecord,
                                                  HashMap<String, Object> goodRecord) {
         HashMap<String, KVImpl> result = new HashMap<String, KVImpl>();
-        for (Map.Entry<String, Object> entry: orderRecord.entrySet()) {
+        for (Map.Entry<String, String> entry: orderRecord.entrySet()) {
             result.put(entry.getKey(), new KVImpl(entry.getKey(), entry.getValue()));
         }
         for (Map.Entry<String, Object> entry: buyerRecord.entrySet()) {
