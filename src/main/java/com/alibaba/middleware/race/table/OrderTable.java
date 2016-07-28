@@ -66,10 +66,17 @@ public class OrderTable {
         }
     }
 
+    private volatile boolean prepared = false;
+
+    public boolean isPrepared() {
+        return prepared;
+    }
+
     public void reopen() {
         goodIndex.reopen();
         orderIndex.reopen();
         buyerIndex.reopen();
+        this.prepared = true;
     }
 
     public RecordIndex findOderIdIndex(long orderId) {

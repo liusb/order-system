@@ -173,7 +173,7 @@ public class PageStore {
     }
 
     public void checkCache() {
-        if (pagesWaitToWrite.size() >= 64) {
+        if (pagesWaitToWrite.size() >= 16) {
             Collections.sort(pagesWaitToWrite);
             for (DataPage page: pagesWaitToWrite) {
                 this.aioWrite(page);

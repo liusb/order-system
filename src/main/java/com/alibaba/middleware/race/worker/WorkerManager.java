@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class WorkerManager {
+public class WorkerManager implements Runnable {
 
     private static final int PARSER_THREAD_NUM = 16;
     private static final int IN_QUEUE_SIZE = 1024;
@@ -47,6 +47,7 @@ public class WorkerManager {
         this.goodFiles = goodFiles;
     }
 
+    @Override
     public void run() {
         long beginTime = System.currentTimeMillis();
         processGoodRecord();

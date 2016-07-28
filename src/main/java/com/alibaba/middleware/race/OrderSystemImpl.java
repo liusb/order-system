@@ -31,7 +31,21 @@ public class OrderSystemImpl implements OrderSystem {
         printDir(buyerFiles, "buyerFiles");
         printDir(goodFiles, "goodFiles");
         printDir(storeFolders, "storeFolders");
-        manager.run();
+
+        Thread managerThread = new Thread(manager);
+        managerThread.setDaemon(true);
+        managerThread.start();
+        long beginTime = System.currentTimeMillis();
+        while (!OrderTable.getInstance().isPrepared()) {
+            if ((System.currentTimeMillis()-beginTime) > 58*60000) {
+                break;
+            }
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void printDir(Collection<String> dir, String name) {
@@ -55,6 +69,13 @@ public class OrderSystemImpl implements OrderSystem {
      * @return 查询结果，如果该订单不存在，返回null
      */
     public Result queryOrder(long orderId, Collection<String> keys) {
+        while (!OrderTable.getInstance().isPrepared()) {
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
         // 查找订单表
         RecordIndex orderIdRowIndex = OrderTable.getInstance().findOderIdIndex(orderId);
         if (orderIdRowIndex == null) {
@@ -114,6 +135,13 @@ public class OrderSystemImpl implements OrderSystem {
      */
     public Iterator<Result> queryOrdersByBuyer(long startTime, long endTime,
       String buyerId) {
+        while (!OrderTable.getInstance().isPrepared()) {
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
         ArrayList<ResultImpl> results = new ArrayList<ResultImpl>();
         ArrayList<RecordIndex> buyerIdRowIndices = OrderTable.getInstance()
                 .findBuyerIdIndex(buyerId, startTime, endTime);
@@ -139,6 +167,13 @@ public class OrderSystemImpl implements OrderSystem {
      */
     public Iterator<Result> queryOrdersBySaler(String salerId, String goodId,
       Collection<String> keys) {
+        while (!OrderTable.getInstance().isPrepared()) {
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
         ArrayList<ResultImpl> results = new ArrayList<ResultImpl>();
         HashMap<String, Object> goodRecord = GoodTable.getInstance().find(goodId);
 
@@ -180,6 +215,13 @@ public class OrderSystemImpl implements OrderSystem {
      * @return 求和结果
      */
     public KeyValue sumOrdersByGood(String goodId, String key) {
+        while (!OrderTable.getInstance().isPrepared()) {
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
         long sumLong = 0;
         double sumDouble = 0.0;
         boolean hasLong = false;
