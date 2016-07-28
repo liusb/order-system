@@ -26,6 +26,7 @@ public class OrderTable {
 //    private static final int BUYER_INDEX_CACHE_SIZE = 64;
 //    private static final int REOPEN_BUYER_INDEX_CACHE_SIZE = 16;
 
+
     private static final int GOOD_TABLE_BUCKET_SIZE = 64*(1<<10);
     private static final int GOOD_TABLE_CACHE_SIZE = 64*(1<<10);
     private static final int GOOD_REOPEN_TABLE_CACHE_SIZE = 32*(1<<10);
