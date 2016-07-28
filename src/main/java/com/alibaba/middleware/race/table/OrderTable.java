@@ -16,13 +16,13 @@ public class OrderTable {
     private OrderTable() {}
 
 
-    private static final int GOOD_INDEX_BUCKET_SIZE = 64;
-    private static final int ORDER_INDEX_BUCKET_SIZE = 64;
-    private static final int BUYER_INDEX_BUCKET_SIZE = 64;
+//    private static final int GOOD_INDEX_BUCKET_SIZE = 64;
+//    private static final int ORDER_INDEX_BUCKET_SIZE = 64;
+//    private static final int BUYER_INDEX_BUCKET_SIZE = 64;
 
-//    private static final int GOOD_INDEX_BUCKET_SIZE = 64*(1<<10);
-//    private static final int ORDER_INDEX_BUCKET_SIZE = 64*(1<<10);
-//    private static final int BUYER_INDEX_BUCKET_SIZE = 128*(1<<10);
+    private static final int GOOD_INDEX_BUCKET_SIZE = 64*(1<<10);
+    private static final int ORDER_INDEX_BUCKET_SIZE = 64*(1<<10);
+    private static final int BUYER_INDEX_BUCKET_SIZE = 64*(1<<10);
 
     // 每页的大小，单位为byte
     private static final int GOOD_TABLE_PAGE_SIZE = 4*(1<<10);

@@ -11,9 +11,9 @@ public class BuyerTable {
     private BuyerTable() { }
 
 
-    private static final int TABLE_BUCKET_SIZE = 256;
+//    private static final int TABLE_BUCKET_SIZE = 256;
 
-//    private static final int TABLE_BUCKET_SIZE = 256*(1<<10);
+    private static final int TABLE_BUCKET_SIZE = 256*(1<<10);
 
     // 每页的大小，单位为byte
     private static final int TABLE_PAGE_SIZE = 4*(1<<10);
