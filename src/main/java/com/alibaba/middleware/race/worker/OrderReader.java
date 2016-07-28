@@ -39,8 +39,8 @@ public class OrderReader implements Runnable {
                 int posInStrBuffer = 0;
                 int mapTime = (int)((fileSize-1)>>30)+1;
                 for (int j=0; j < mapTime; j++) {
-                    long mapSize = Math.min((1<<30), fileSize-(j*(1<<30)));
-                    long mapBegin = j*(1<<30);
+                    long mapBegin = ((long)(1<<30))*j;
+                    long mapSize = Math.min((1<<30), fileSize-mapBegin);
                     MappedByteBuffer buffer = fileChannel.map(FileChannel.MapMode.READ_ONLY, mapBegin, mapSize);
                     String line;
                     for (int posInMap = 0; posInMap < mapSize; posInMap++) {
