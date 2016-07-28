@@ -4,9 +4,9 @@ import com.alibaba.middleware.race.index.RecordIndex;
 import com.alibaba.middleware.race.table.OrderLine;
 
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -16,7 +16,6 @@ import java.util.concurrent.TimeUnit;
 public class OrderReader implements Runnable {
     private ArrayList<LinkedBlockingQueue<OrderLine>> outs;
     private HashMap<String, Byte> files;
-    private long threadId;
 
     public OrderReader(HashMap<String, Byte> files, ArrayList<LinkedBlockingQueue<OrderLine>> outs) {
         this.outs = outs;
@@ -25,14 +24,14 @@ public class OrderReader implements Runnable {
 
     @Override
     public void run() {
-        this.threadId = Thread.currentThread().getId();
+        long threadId = Thread.currentThread().getId();
         int step = (int) (threadId % 3) + 1;
         int i;
         int outSize = outs.size();
         long lineCount = 0;
         try {
             for (Map.Entry<String, Byte> entry : this.files.entrySet()) {
-                FileChannel fileChannel = new RandomAccessFile(entry.getKey(), "r").getChannel();
+                FileChannel fileChannel = FileChannel.open(Paths.get(entry.getKey()));
                 long fileSize = fileChannel.size();
                 byte fileId = entry.getValue();
                 byte[] strBuffer = new byte[1024];

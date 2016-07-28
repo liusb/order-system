@@ -13,8 +13,6 @@ public class IndexWriter<T extends RowIndex> implements Runnable {
     private Data buffer;
     private PageStore pageFile;
     private HashIndex index;
-    private long inCount;
-    private long threadId;
 
     public IndexWriter(LinkedBlockingQueue<T> in,
                        PageStore pageFile, HashIndex index) {
@@ -23,8 +21,6 @@ public class IndexWriter<T extends RowIndex> implements Runnable {
         this.pageFile = pageFile;
         this.index = index;
         this.buffer = new Data(new byte[256]);
-        this.inCount = 0;
-        this.threadId = 0;
     }
 
     private void nextRow() {
@@ -67,7 +63,9 @@ public class IndexWriter<T extends RowIndex> implements Runnable {
 
     @Override
     public void run() {
-        this.threadId = Thread.currentThread().getId();
+        long threadId = Thread.currentThread().getId();
+        long beginMillis = System.currentTimeMillis();
+        int inCount = 0;
         while (true) {
             this.nextRow();
             if(row.getRecodeIndex().getAddress()==-1) {
@@ -84,6 +82,10 @@ public class IndexWriter<T extends RowIndex> implements Runnable {
             int bucketId = index.getBucketId(row.getHashCode());
             pageFile.insertIndexData(bucketId, buffer);
             inCount++;
+            if((inCount & ((1<<24)-1)) == 0) {
+                System.out.println("INFO: Write " + inCount + "Order used "
+                        + (System.currentTimeMillis() - beginMillis) + "millis in thread " + threadId);
+            }
         }
         this.pageFile.close();
         System.out.println("INFO: Writer thread completed. inCount:" + inCount + " Thread id:" + threadId);
