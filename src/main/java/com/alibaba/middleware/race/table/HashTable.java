@@ -15,7 +15,6 @@ import java.util.Map;
 
 public class HashTable extends Table {
     private HashIndex index;
-    private int pageSize;
     private String[] columnsMap;
 
     public HashTable(String name) {
@@ -25,9 +24,8 @@ public class HashTable extends Table {
 
     public void init(Collection<String> storeFolders, int bucketSize, int pageSize) {
         for (String folder: storeFolders) {
-            this.pageSize = pageSize;
             PageStore pageStore = new PageStore(folder + "/" + this.name + ".db",
-                    bucketSize, this.pageSize);
+                    bucketSize, pageSize);
             pageStore.open("rw");
             this.storeFiles.add(pageStore);
         }

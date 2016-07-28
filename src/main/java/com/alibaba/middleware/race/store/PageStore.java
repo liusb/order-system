@@ -140,6 +140,9 @@ public class PageStore {
                 changed.add(page);
             }
         }
+        for (DataPage page: pagesWaitToWrite) {
+            changed.add(page);
+        }
         Collections.sort(changed);
         for (DataPage page: changed) {
             writeBack(page);
@@ -170,7 +173,7 @@ public class PageStore {
     }
 
     public void checkCache() {
-        if (pagesWaitToWrite.size() > 10) {
+        if (pagesWaitToWrite.size() > 20) {
             Collections.sort(pagesWaitToWrite);
             for (DataPage page: pagesWaitToWrite) {
                 this.aioWrite(page);
