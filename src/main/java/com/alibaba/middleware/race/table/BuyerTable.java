@@ -11,14 +11,9 @@ public class BuyerTable {
     private BuyerTable() { }
 
 
-//    private static final int TABLE_BUCKET_SIZE = 256;
-//    private static final int TABLE_CACHE_SIZE = 256;
-//    private static final int REOPEN_TABLE_CACHE_SIZE = 32;
+    private static final int TABLE_BUCKET_SIZE = 256;
 
-
-    private static final int TABLE_BUCKET_SIZE = 256*(1<<10);
-    private static final int TABLE_CACHE_SIZE = 256*(1<<10);
-    private static final int REOPEN_TABLE_CACHE_SIZE = 64*(1<<10);
+//    private static final int TABLE_BUCKET_SIZE = 256*(1<<10);
 
     // 每页的大小，单位为byte
     private static final int TABLE_PAGE_SIZE = 4*(1<<10);
@@ -30,12 +25,12 @@ public class BuyerTable {
     public void init(Collection<String> storeFolders) {
         baseTable = new HashTable("buyerTable");
         baseTable.setBaseColumns(TABLE_COLUMNS);
-        baseTable.init(storeFolders, TABLE_BUCKET_SIZE, TABLE_CACHE_SIZE, TABLE_PAGE_SIZE);
+        baseTable.init(storeFolders, TABLE_BUCKET_SIZE, TABLE_PAGE_SIZE);
     }
 
     // 在构造完，准备查询前重新打开，以只读方式打开，缓存为只读，
     public void reopen() {
-        this.baseTable.reopen(REOPEN_TABLE_CACHE_SIZE);
+        this.baseTable.reopen();
     }
 
 

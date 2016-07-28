@@ -4,7 +4,7 @@ import com.alibaba.middleware.race.cache.SafeData;
 import com.alibaba.middleware.race.index.HashIndex;
 import com.alibaba.middleware.race.index.RecordIndex;
 import com.alibaba.middleware.race.store.Data;
-import com.alibaba.middleware.race.store.HashDataPage;
+import com.alibaba.middleware.race.store.DataPage;
 import com.alibaba.middleware.race.store.PageStore;
 import com.alibaba.middleware.race.type.Value;
 
@@ -23,21 +23,20 @@ public class HashTable extends Table {
         this.name = name;
     }
 
-    public void init(Collection<String> storeFolders, int bucketSize,
-                     int cacheSize, int pageSize) {
+    public void init(Collection<String> storeFolders, int bucketSize, int pageSize) {
         for (String folder: storeFolders) {
             this.pageSize = pageSize;
             PageStore pageStore = new PageStore(folder + "/" + this.name + ".db",
                     bucketSize, this.pageSize);
-            pageStore.open("rw", cacheSize);
+            pageStore.open("rw");
             this.storeFiles.add(pageStore);
         }
         this.index = new HashIndex(bucketSize, this.storeFiles.size());
     }
 
-    public void reopen(int cacheSize) {
+    public void reopen() {
         for (PageStore pageStore: this.storeFiles) {
-            pageStore.open("r", cacheSize);
+            pageStore.open("r");
         }
         this.initColumnsMap();
     }
@@ -73,11 +72,11 @@ public class HashTable extends Table {
         int readHashCode;
         String readString;
         long readTime;
-        HashDataPage page;
+        DataPage page;
         Data data;
         while (true) {
             page = pageStore.getPage(bucketIndex);
-            data = new Data(page.getData().getBytes(), HashDataPage.HeaderLength);
+            data = new Data(page.getData().getBytes(), DataPage.HeaderLength);
             // [hashCode(int), buyerId(len,string), createTime(long), fileId(byte), address(long)]
             while (data.getPos() < page.getDataLen()) {
                 readHashCode = data.readInt();
@@ -113,13 +112,13 @@ public class HashTable extends Table {
         if (!pageStore.isBucketUsed(bucketIndex)) {
             return null;
         }
-        HashDataPage page;
+        DataPage page;
         Data data;
         long readOrderId;
         while (true) {
             page = pageStore.getPage(bucketIndex);
             data = new Data(page.getData().getBytes());
-            data.setPos(HashDataPage.HeaderLength);
+            data.setPos(DataPage.HeaderLength);
             // [orderId(long), fileId(byte), address(long)]
             while (data.getPos() < page.getDataLen()) {
                 readOrderId = data.readLong();
@@ -146,11 +145,11 @@ public class HashTable extends Table {
         }
         int readHashCode;
         String readString;
-        HashDataPage page;
+        DataPage page;
         Data data;
         while (true) {
             page = pageStore.getPage(bucketIndex);
-            data = new Data(page.getData().getBytes(), HashDataPage.HeaderLength);
+            data = new Data(page.getData().getBytes(), DataPage.HeaderLength);
             // [hashCode(int), goodId(len,string), fileId(byte), address(long)]
             while (data.getPos() < page.getDataLen()) {
                 readHashCode = data.readInt();
@@ -214,7 +213,7 @@ public class HashTable extends Table {
         int readHash=0;
         int readLen=0;
         int dataLen = 0;
-        HashDataPage page;
+        DataPage page;
         Data data = new Data(new byte[1]);
         Data buffer = SafeData.getData();
         boolean nextRecord = true;
@@ -224,7 +223,7 @@ public class HashTable extends Table {
                     break;
                 }
                 page = pageStore.getPage(pageId);
-                data = new Data(page.getData().getBytes(), HashDataPage.HeaderLength);
+                data = new Data(page.getData().getBytes(), DataPage.HeaderLength);
                 dataLen = page.getDataLen();
                 pageId = page.getNextPage();
             }

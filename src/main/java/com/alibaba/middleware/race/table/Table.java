@@ -34,6 +34,10 @@ public abstract class Table {
         return this.columns.get(name);
     }
 
+    public boolean containColumn(String name) {
+        return this.columns.containsKey(name);
+    }
+
     public ArrayList<PageStore> getPageFiles() {
         return this.storeFiles;
     }

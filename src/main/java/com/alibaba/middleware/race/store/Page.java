@@ -4,7 +4,6 @@ import com.alibaba.middleware.race.cache.CacheObject;
 
 public abstract class Page extends CacheObject {
 
-    public static final int DataLenPos = 0;
     protected int dataLen;
 
     protected Data data;

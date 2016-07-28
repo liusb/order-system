@@ -55,18 +55,27 @@ public class OrderSystemImpl implements OrderSystem {
      * @return 查询结果，如果该订单不存在，返回null
      */
     public Result queryOrder(long orderId, Collection<String> keys) {
-        TreeMap<Integer, String> goodKeys = null;
-        TreeMap<Integer, String> buyerKeys = null;
-        if (keys != null) {
-            goodKeys = new TreeMap<Integer, String>();
-            buyerKeys = new TreeMap<Integer, String>();
-            keyOfTable(keys, goodKeys, buyerKeys);
-        }
         // 查找订单表
         RecordIndex orderIdRowIndex = OrderTable.getInstance().findOderIdIndex(orderId);
         if (orderIdRowIndex == null) {
             return null;
         }
+//        boolean shouldQueryGood = (keys == null);
+//        boolean shouldQueryBuyer = (keys == null);
+//        if (!shouldQueryGood) {
+//            HashTable goodTable = GoodTable.getInstance().baseTable;
+//            HashTable buyerTable = BuyerTable.getInstance().baseTable;
+//            for (String key: keys) {
+//                if (goodTable.containColumn(key)) {
+//                    shouldQueryGood = true;
+//                } else if (buyerTable.containColumn(key)) {
+//                    shouldQueryBuyer = true;
+//                }
+//                if (shouldQueryGood && shouldQueryBuyer) {
+//                    break;
+//                }
+//            }
+//        }
         HashMap<String, String> orderRecord = OrderTable.getInstance().findOrder(orderIdRowIndex);
         String buyerId = orderRecord.get("buyerid");
         HashMap<String, Object> buyerRecord = BuyerTable.getInstance().find(buyerId);
@@ -239,24 +248,4 @@ public class OrderSystemImpl implements OrderSystem {
         return result;
     }
 
-
-    // 找到各表的字段
-    private void keyOfTable(Collection<String> keys,
-                            TreeMap<Integer, String> goodKeys, TreeMap<Integer, String> buyerKeys) {
-        HashTable goodTable = GoodTable.getInstance().baseTable;
-        HashTable buyerTable = BuyerTable.getInstance().baseTable;
-
-        Integer columnId;
-        for(String key: keys) {
-            columnId = goodTable.findColumnId(key);
-            if (columnId != null) {
-                goodKeys.put(columnId, key);
-            } else {
-                columnId = buyerTable.findColumnId(key);
-                if (columnId != null) {
-                    buyerKeys.put(columnId, key);
-                }
-            }
-        }
-    }
 }

@@ -16,26 +16,13 @@ public class OrderTable {
     private OrderTable() {}
 
 
-//    private static final int GOOD_INDEX_BUCKET_SIZE = 64;
-//    private static final int GOOD_INDEX_CACHE_SIZE = 64;
-//    private static final int REOPEN_GOOD_INDEX_CACHE_SIZE = 32;
-//    private static final int ORDER_INDEX_BUCKET_SIZE = 64;
-//    private static final int ORDER_INDEX_CACHE_SIZE = 64;
-//    private static final int REOPEN_ORDER_INDEX_CACHE_SIZE = 32;
-//    private static final int BUYER_INDEX_BUCKET_SIZE = 64;
-//    private static final int BUYER_INDEX_CACHE_SIZE = 64;
-//    private static final int REOPEN_BUYER_INDEX_CACHE_SIZE = 64;
+    private static final int GOOD_INDEX_BUCKET_SIZE = 64;
+    private static final int ORDER_INDEX_BUCKET_SIZE = 64;
+    private static final int BUYER_INDEX_BUCKET_SIZE = 64;
 
-
-    private static final int GOOD_INDEX_BUCKET_SIZE = 64*(1<<10);
-    private static final int GOOD_INDEX_CACHE_SIZE = 64*(1<<10);
-    private static final int REOPEN_GOOD_INDEX_CACHE_SIZE = 32*(1<<10);
-    private static final int ORDER_INDEX_BUCKET_SIZE = 64*(1<<10);
-    private static final int ORDER_INDEX_CACHE_SIZE = 64*(1<<10);
-    private static final int REOPEN_ORDER_INDEX_CACHE_SIZE = 32*(1<<10);
-    private static final int BUYER_INDEX_BUCKET_SIZE = 128*(1<<10);
-    private static final int BUYER_INDEX_CACHE_SIZE = 128*(1<<10);
-    private static final int REOPEN_BUYER_INDEX_CACHE_SIZE = 64*(1<<10);
+//    private static final int GOOD_INDEX_BUCKET_SIZE = 64*(1<<10);
+//    private static final int ORDER_INDEX_BUCKET_SIZE = 64*(1<<10);
+//    private static final int BUYER_INDEX_BUCKET_SIZE = 128*(1<<10);
 
     // 每页的大小，单位为byte
     private static final int GOOD_TABLE_PAGE_SIZE = 4*(1<<10);
@@ -57,15 +44,15 @@ public class OrderTable {
     public void init(Collection<String> storeFolders, Collection<String> orderFiles) {
         goodIndex = new HashTable("orderTable");
         goodIndex.setBaseColumns(INDEX_COLUMNS);
-        goodIndex.init(storeFolders, GOOD_INDEX_BUCKET_SIZE, GOOD_INDEX_CACHE_SIZE, GOOD_TABLE_PAGE_SIZE);
+        goodIndex.init(storeFolders, GOOD_INDEX_BUCKET_SIZE, GOOD_TABLE_PAGE_SIZE);
 
         orderIndex = new HashTable("orderIndex");
         orderIndex.setBaseColumns(INDEX_COLUMNS);
-        orderIndex.init(storeFolders, ORDER_INDEX_BUCKET_SIZE, ORDER_INDEX_CACHE_SIZE, ORDER_INDEX_PAGE_SIZE);
+        orderIndex.init(storeFolders, ORDER_INDEX_BUCKET_SIZE, ORDER_INDEX_PAGE_SIZE);
 
         buyerIndex = new HashTable("buyerIndex");
         buyerIndex.setBaseColumns(INDEX_COLUMNS);
-        buyerIndex.init(storeFolders, BUYER_INDEX_BUCKET_SIZE, BUYER_INDEX_CACHE_SIZE, BUYER_INDEX_PAGE_SIZE);
+        buyerIndex.init(storeFolders, BUYER_INDEX_BUCKET_SIZE, BUYER_INDEX_PAGE_SIZE);
 
         orderFilesMap = new HashMap<String, Byte>(43);
         for (String file: orderFiles) {
@@ -80,9 +67,9 @@ public class OrderTable {
     }
 
     public void reopen() {
-        goodIndex.reopen(REOPEN_GOOD_INDEX_CACHE_SIZE);
-        orderIndex.reopen(REOPEN_ORDER_INDEX_CACHE_SIZE);
-        buyerIndex.reopen(REOPEN_BUYER_INDEX_CACHE_SIZE);
+        goodIndex.reopen();
+        orderIndex.reopen();
+        buyerIndex.reopen();
     }
 
     public RecordIndex findOderIdIndex(long orderId) {

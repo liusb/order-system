@@ -1,17 +1,25 @@
 package com.alibaba.middleware.race.store;
 
 
-public class HashDataPage extends Page {
+import com.alibaba.middleware.race.utils.MathUtils;
+
+public class DataPage implements Comparable<DataPage> {
 
     public static final int HeaderLength = 8;
+    public static final int DataLenPos = 0;
     public static final int NextPos = DataLenPos+4;
-
+    private int dataLen;
     private int nextPage;
+    private Data data;
 
-    public HashDataPage(Data data, int pageId) {
-        super(data, HeaderLength);
+    private int pageId;
+
+    public DataPage(Data data, int pageId) {
         this.nextPage = -1;
-        this.setPos(pageId);
+        this.dataLen = 0;
+        this.data = data;
+        this.pageId = pageId;
+        this.data.setPos(HeaderLength);
     }
 
     public void writeHeader() {
@@ -27,6 +35,14 @@ public class HashDataPage extends Page {
         this.data.setPos(pos);
     }
 
+    public void setDataLen(int dataLen) {
+        this.dataLen = dataLen;
+    }
+
+    public int getDataLen() {
+        return dataLen;
+    }
+
     public void setNextPage(int nextPage) {
         this.nextPage = nextPage;
     }
@@ -35,17 +51,16 @@ public class HashDataPage extends Page {
         return nextPage;
     }
 
-    public void freeData() {
-        this.data.reset();
-        this.data = null;
+    public int getPageId() {
+        return pageId;
     }
 
-    public boolean dataIsFree() {
-        return this.data == null;
+    public Data getData() {
+        return data;
     }
 
     @Override
-    public boolean canRemove() {
-        return true;
+    public int compareTo(DataPage other) {
+        return MathUtils.compareInt(pageId, other.pageId);
     }
 }
