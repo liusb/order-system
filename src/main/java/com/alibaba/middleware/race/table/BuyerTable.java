@@ -13,7 +13,7 @@ public class BuyerTable {
 
 //    private static final int TABLE_BUCKET_SIZE = 256;
 //    private static final int TABLE_CACHE_SIZE = 256;
-//    private static final int REOPEN_TABLE_CACHE_SIZE = 4;
+//    private static final int REOPEN_TABLE_CACHE_SIZE = 32;
 
     private static final int TABLE_BUCKET_SIZE = 256*(1<<10);
     private static final int TABLE_CACHE_SIZE = 256*(1<<10);

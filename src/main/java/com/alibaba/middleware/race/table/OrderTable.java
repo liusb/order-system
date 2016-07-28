@@ -16,19 +16,19 @@ public class OrderTable {
     private OrderTable() {}
 
 
-//    private static final int GOOD_TABLE_BUCKET_SIZE = 64;
-//    private static final int GOOD_TABLE_CACHE_SIZE = 64;
-//    private static final int GOOD_REOPEN_TABLE_CACHE_SIZE = 16;
+//    private static final int GOOD_INDEX_BUCKET_SIZE = 64;
+//    private static final int GOOD_INDEX_CACHE_SIZE = 64;
+//    private static final int REOPEN_GOOD_INDEX_CACHE_SIZE = 32;
 //    private static final int ORDER_INDEX_BUCKET_SIZE = 64;
 //    private static final int ORDER_INDEX_CACHE_SIZE = 64;
-//    private static final int REOPEN_ORDER_INDEX_CACHE_SIZE = 16;
+//    private static final int REOPEN_ORDER_INDEX_CACHE_SIZE = 32;
 //    private static final int BUYER_INDEX_BUCKET_SIZE = 64;
 //    private static final int BUYER_INDEX_CACHE_SIZE = 64;
-//    private static final int REOPEN_BUYER_INDEX_CACHE_SIZE = 16;
+//    private static final int REOPEN_BUYER_INDEX_CACHE_SIZE = 64;
 
-    private static final int GOOD_TABLE_BUCKET_SIZE = 64*(1<<10);
-    private static final int GOOD_TABLE_CACHE_SIZE = 64*(1<<10);
-    private static final int GOOD_REOPEN_TABLE_CACHE_SIZE = 32*(1<<10);
+    private static final int GOOD_INDEX_BUCKET_SIZE = 64*(1<<10);
+    private static final int GOOD_INDEX_CACHE_SIZE = 64*(1<<10);
+    private static final int REOPEN_GOOD_INDEX_CACHE_SIZE = 32*(1<<10);
     private static final int ORDER_INDEX_BUCKET_SIZE = 64*(1<<10);
     private static final int ORDER_INDEX_CACHE_SIZE = 64*(1<<10);
     private static final int REOPEN_ORDER_INDEX_CACHE_SIZE = 32*(1<<10);
@@ -56,7 +56,7 @@ public class OrderTable {
     public void init(Collection<String> storeFolders, Collection<String> orderFiles) {
         goodIndex = new HashTable("orderTable");
         goodIndex.setBaseColumns(INDEX_COLUMNS);
-        goodIndex.init(storeFolders, GOOD_TABLE_BUCKET_SIZE, GOOD_TABLE_CACHE_SIZE, GOOD_TABLE_PAGE_SIZE);
+        goodIndex.init(storeFolders, GOOD_INDEX_BUCKET_SIZE, GOOD_INDEX_CACHE_SIZE, GOOD_TABLE_PAGE_SIZE);
 
         orderIndex = new HashTable("orderIndex");
         orderIndex.setBaseColumns(INDEX_COLUMNS);
@@ -79,7 +79,7 @@ public class OrderTable {
     }
 
     public void reopen() {
-        goodIndex.reopen(GOOD_REOPEN_TABLE_CACHE_SIZE);
+        goodIndex.reopen(REOPEN_GOOD_INDEX_CACHE_SIZE);
         orderIndex.reopen(REOPEN_ORDER_INDEX_CACHE_SIZE);
         buyerIndex.reopen(REOPEN_BUYER_INDEX_CACHE_SIZE);
     }
