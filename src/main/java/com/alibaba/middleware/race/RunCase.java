@@ -32,10 +32,12 @@ public class RunCase {
         os.construct(orderFiles, buyerFiles, goodFiles, storeFolders);
 
         // 检查构建是否有错误
-        //SysteCheck.systemCheck(orderFiles, buyerFiles, goodFiles, os);
+        SystemCheck.systemCheck(orderFiles, buyerFiles, goodFiles, os);
 
         // 用例
+        long beginTime = System.currentTimeMillis();
         checkCase(os, 20);
+        System.out.println("Check all case used " + (System.currentTimeMillis()-beginTime) + " millis");
 
     }
 
@@ -78,7 +80,7 @@ public class RunCase {
                             if (line.length() != resultStr.length() || !compareResult(line, result)) {
                                 throw new RuntimeException("CASE:QUERY_ORDER, orderId:" + orderId
                                         + " " + keysStr + " 结果不一致\n"
-                                        + line + "\n not equal \n" + result);
+                                        + line + "\n not equal result \n" + result);
                             }
                         }
                     }

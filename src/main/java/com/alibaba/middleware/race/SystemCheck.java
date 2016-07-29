@@ -4,7 +4,6 @@ import com.alibaba.middleware.race.store.PageStore;
 import com.alibaba.middleware.race.table.BuyerTable;
 import com.alibaba.middleware.race.table.GoodTable;
 import com.alibaba.middleware.race.table.HashTable;
-import com.alibaba.middleware.race.table.OrderTable;
 import com.alibaba.middleware.race.worker.LineReader;
 
 import java.util.Collection;
@@ -24,11 +23,6 @@ public class SystemCheck {
         System.out.println("========================total Count:" + totalCount);
         totalCount = 0;
         for (PageStore pageFile: BuyerTable.getInstance().baseTable.getPageFiles()) {
-            totalCount += pageFile.FileCheck();
-        }
-        System.out.println("========================total Count:" + totalCount);
-        totalCount = 0;
-        for (PageStore pageFile: OrderTable.getInstance().goodIndex.getPageFiles()) {
             totalCount += pageFile.FileCheck();
         }
         System.out.println("========================total Count:" + totalCount);
