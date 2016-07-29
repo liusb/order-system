@@ -81,40 +81,69 @@ public class OrderSystemImpl implements OrderSystem {
         if (orderIdRowIndex == null) {
             return null;
         }
-//        boolean shouldQueryGood = (keys == null);
-//        boolean shouldQueryBuyer = (keys == null);
-//        if (!shouldQueryGood) {
-//            HashTable goodTable = GoodTable.getInstance().baseTable;
-//            HashTable buyerTable = BuyerTable.getInstance().baseTable;
-//            for (String key: keys) {
-//                if (goodTable.containColumn(key)) {
-//                    shouldQueryGood = true;
-//                } else if (buyerTable.containColumn(key)) {
-//                    shouldQueryBuyer = true;
-//                }
-//                if (shouldQueryGood && shouldQueryBuyer) {
-//                    break;
-//                }
-//            }
-//        }
-        HashMap<String, String> orderRecord = OrderTable.getInstance().findOrder(orderIdRowIndex);
-        String buyerId = orderRecord.get("buyerid");
-        HashMap<String, Object> buyerRecord = BuyerTable.getInstance().find(buyerId);
-        String goodId = orderRecord.get("goodid");
-        HashMap<String, Object> goodRecord = GoodTable.getInstance().find(goodId);
+        // 查询字段分类
+        ArrayList<String> orderTableKeys = null;
+        ArrayList<String> goodTableKeys = null;
+        ArrayList<String> buyerTableKeys = null;
+        if (keys != null) {
+            HashTable goodTable = GoodTable.getInstance().baseTable;
+            HashTable buyerTable = BuyerTable.getInstance().baseTable;
+            orderTableKeys = new ArrayList<String>();
+            goodTableKeys = new ArrayList<String>();
+            buyerTableKeys = new ArrayList<String>();
+            for (String key: keys) {
+                if (goodTable.containColumn(key)) {
+                    goodTableKeys.add(key);
+                } else if (buyerTable.containColumn(key)) {
+                    buyerTableKeys.add(key);
+                } else {
+                    orderTableKeys.add(key);
+                }
+            }
+        }
+        if (goodTableKeys != null && goodTableKeys.size() == 1 && goodTableKeys.contains("goodid")) {
+            orderTableKeys.add("goodid");
+            goodTableKeys.clear();
+        }
+        if (buyerTableKeys != null && buyerTableKeys.size() == 1 && buyerTableKeys.contains("buyerid")) {
+            orderTableKeys.add("buyerid");
+            buyerTableKeys.clear();
+        }
+
+        HashMap<String, String> orderRecord = null;
+        HashMap<String, Object> goodRecord = null;
+        HashMap<String, Object> buyerRecord = null;
+        if (keys == null || keys.size() > 0) {
+            orderRecord = OrderTable.getInstance().findOrder(orderIdRowIndex);
+        }
+        if (goodTableKeys == null || goodTableKeys.size() > 0) {
+            goodRecord = GoodTable.getInstance().find(orderRecord.get("goodid"));
+        }
+        if (buyerTableKeys == null || buyerTableKeys.size() > 0) {
+            buyerRecord = BuyerTable.getInstance().find(orderRecord.get("buyerid"));
+        }
         HashMap<String, KVImpl> result;
         if (keys == null) {
             result = joinResult(orderRecord, buyerRecord, goodRecord);
         } else {
             result = new HashMap<String, KVImpl>();
-            for (String key: keys) {
-                Object value = orderRecord.get(key);
-                if (value == null) {
-                    value = goodRecord.get(key);
-                    if (value == null) {
-                        value = buyerRecord.get(key);
-                    }
+            Object value;
+            for (String key: orderTableKeys) {
+                value = orderRecord.get(key);
+                if (value != null) {
+                    KVImpl kv = new KVImpl(key, value);
+                    result.put(key, kv);
                 }
+            }
+            for (String key: goodTableKeys) {
+                value = goodRecord.get(key);
+                if (value != null) {
+                    KVImpl kv = new KVImpl(key, value);
+                    result.put(key, kv);
+                }
+            }
+            for (String key: buyerTableKeys) {
+                value = buyerRecord.get(key);
                 if (value != null) {
                     KVImpl kv = new KVImpl(key, value);
                     result.put(key, kv);
@@ -174,34 +203,83 @@ public class OrderSystemImpl implements OrderSystem {
                 e.printStackTrace();
             }
         }
-        ArrayList<ResultImpl> results = new ArrayList<ResultImpl>();
-        HashMap<String, Object> goodRecord = GoodTable.getInstance().find(goodId);
 
         ArrayList<RecordIndex> goodRowIndex = OrderTable.getInstance().findGoodIdIndex(goodId);
+        if (goodRowIndex.isEmpty()) {  // 没有销售记录
+            return new ResultIterator(new ArrayList<ResultImpl>());
+        }
+
+        // 查询字段分类
+        ArrayList<String> orderTableKeys = null;
+        ArrayList<String> goodTableKeys = null;
+        ArrayList<String> buyerTableKeys = null;
+        if (keys != null) {
+            HashTable goodTable = GoodTable.getInstance().baseTable;
+            HashTable buyerTable = BuyerTable.getInstance().baseTable;
+            orderTableKeys = new ArrayList<String>();
+            goodTableKeys = new ArrayList<String>();
+            buyerTableKeys = new ArrayList<String>();
+            for (String key: keys) {
+                if (goodTable.containColumn(key)) {
+                    goodTableKeys.add(key);
+                } else if (buyerTable.containColumn(key)) {
+                    buyerTableKeys.add(key);
+                } else {
+                    orderTableKeys.add(key);
+                }
+            }
+        }
+
+        if (goodTableKeys != null && goodTableKeys.size() == 1 && goodTableKeys.contains("goodid")) {
+            orderTableKeys.add("goodid");
+            goodTableKeys.clear();
+        }
+        if (buyerTableKeys != null && buyerTableKeys.size() == 1 && buyerTableKeys.contains("buyerid")) {
+            orderTableKeys.add("buyerid");
+            buyerTableKeys.clear();
+        }
+
+        ArrayList<ResultImpl> results = new ArrayList<ResultImpl>();
+        HashMap<String, KVImpl> result;
+        HashMap<String, Object> goodRecord = null;
+        HashMap<String, Object> buyerRecord = null;
+        if (goodTableKeys == null || goodTableKeys.size() > 0) {
+            goodRecord = GoodTable.getInstance().find(goodId);
+        }
+
         ArrayList<HashMap<String, String>>  orderRecords = OrderTable.getInstance().findOrders(goodRowIndex);
-        for (HashMap<String, String> order : orderRecords) {
-            String buyerId = order.get("buyerid");
-            HashMap<String, Object> buyerRecord = BuyerTable.getInstance().find(buyerId);
-            HashMap<String, KVImpl> result;
+        for (HashMap<String, String> orderRecord : orderRecords) {
+            if (buyerTableKeys == null || buyerTableKeys.size() > 0) {
+                buyerRecord = BuyerTable.getInstance().find(orderRecord.get("buyerid"));
+            }
             if (keys == null) {
-                result = joinResult(order, buyerRecord, goodRecord);
+                result = joinResult(orderRecord, buyerRecord, goodRecord);
             } else {
                 result = new HashMap<String, KVImpl>();
-                for (String key: keys) {
-                    Object value = order.get(key);
-                    if (value == null) {
-                        value = goodRecord.get(key);
-                        if (value == null) {
-                            value = buyerRecord.get(key);
-                        }
+                Object value;
+                for (String key: orderTableKeys) {
+                    value = orderRecord.get(key);
+                    if (value != null) {
+                        KVImpl kv = new KVImpl(key, value);
+                        result.put(key, kv);
                     }
+                }
+                for (String key: goodTableKeys) {
+                    value = goodRecord.get(key);
+                    if (value != null) {
+                        KVImpl kv = new KVImpl(key, value);
+                        result.put(key, kv);
+                    }
+                }
+                for (String key: buyerTableKeys) {
+                    value = buyerRecord.get(key);
                     if (value != null) {
                         KVImpl kv = new KVImpl(key, value);
                         result.put(key, kv);
                     }
                 }
             }
-            results.add(new ResultImpl(Long.parseLong(order.get("orderid")), result));
+            results.add(new ResultImpl(Long.parseLong(orderRecord.get("orderid")), result));
         }
         return new ResultIterator(results);
     }
@@ -222,22 +300,45 @@ public class OrderSystemImpl implements OrderSystem {
                 e.printStackTrace();
             }
         }
+        ArrayList<RecordIndex> goodRowIndex = OrderTable.getInstance().findGoodIdIndex(goodId);
+        if (goodRowIndex.isEmpty()) {
+            return null;
+        }
+        HashMap<String, Object> goodRecord = null;
+        if (GoodTable.getInstance().baseTable.containColumn(key)) {
+            goodRecord = GoodTable.getInstance().find(goodId);
+            Object value = goodRecord.get(key);
+            if (value == null) {
+                return null;
+            } else if (value instanceof Long) {
+                return new KVImpl (key, goodRowIndex.size()*(Long)value);
+            } else if(value instanceof Double) {
+                return new KVImpl (key, goodRowIndex.size()*(Double)value);
+            } else if (value instanceof String) {
+                try {
+                    return new KVImpl (key, goodRowIndex.size()*Long.parseLong(((String) value)));
+                } catch (NumberFormatException e) {
+                    try {
+                        return new KVImpl (key, goodRowIndex.size()*Double.parseDouble(((String) value)));
+                    } catch (NumberFormatException e2) {
+                        return null;
+                    }
+                }
+            }
+        }
         long sumLong = 0;
         double sumDouble = 0.0;
         boolean hasLong = false;
         boolean hasDouble = false;
-        ArrayList<RecordIndex> goodRowIndex = OrderTable.getInstance().findGoodIdIndex(goodId);
+        boolean keyInBuyerTable = BuyerTable.getInstance().baseTable.containColumn(key);
         ArrayList<HashMap<String, String>>  orderRecords = OrderTable.getInstance().findOrders(goodRowIndex);
-        HashMap<String, Object> goodRecord = GoodTable.getInstance().find(goodId);
         for (HashMap<String, String> order : orderRecords) {
-            Object value = order.get(key);
-            if (value == null) {
-                value = goodRecord.get(key);
-                if (value == null) {
-                    String buyerId = order.get("buyerid");
-                    HashMap<String, Object> buyerRecord = BuyerTable.getInstance().find(buyerId);
-                    value = buyerRecord.get(key);
-                }
+            Object value;
+            if (!keyInBuyerTable) {
+                value = order.get(key);
+            } else {
+                HashMap<String, Object> buyerRecord = BuyerTable.getInstance().find(order.get("buyerid"));
+                value = buyerRecord.get(key);
             }
             if (value != null) {
                 if (value instanceof Long) {
