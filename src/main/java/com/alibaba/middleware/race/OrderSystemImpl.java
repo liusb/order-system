@@ -37,7 +37,7 @@ public class OrderSystemImpl implements OrderSystem {
         managerThread.start();
         long beginTime = System.currentTimeMillis();
         while (!OrderTable.getInstance().isPrepared()) {
-            if ((System.currentTimeMillis()-beginTime) > 58*60000) {
+            if ((System.currentTimeMillis()-beginTime) > 59*60000) {
                 break;
             }
             try {
