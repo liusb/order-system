@@ -1,8 +1,8 @@
 package com.alibaba.middleware.race.type;
 
 public class ValueBoolean extends Value {
-    static public String booleanTrueValue = "true";
-    static public String booleanFalseValue = "false";
+    static final public String booleanTrueValue = "true";
+    static final public String booleanFalseValue = "false";
 
     public static final ValueBoolean TRUE = new ValueBoolean(true);
     public static final ValueBoolean FALSE = new ValueBoolean(false);
