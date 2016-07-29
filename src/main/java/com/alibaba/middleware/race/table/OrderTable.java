@@ -1,5 +1,6 @@
 package com.alibaba.middleware.race.table;
 
+import com.alibaba.middleware.race.cache.TwoLevelCache;
 import com.alibaba.middleware.race.index.RecordIndex;
 
 import java.io.IOException;
@@ -15,6 +16,7 @@ public class OrderTable {
     }
     private OrderTable() {}
 
+    private TwoLevelCache<Long, HashMap<String, String>> resultCache;
 
 //    private static final int GOOD_INDEX_BUCKET_SIZE = 64;
 //    private static final int ORDER_INDEX_BUCKET_SIZE = 64;
@@ -77,6 +79,7 @@ public class OrderTable {
         orderIndex.reopen();
         buyerIndex.reopen();
         this.prepared = true;
+        resultCache = new TwoLevelCache<Long, HashMap<String, String>>(2048*1024, 128*1024);
     }
 
     public RecordIndex findOderIdIndex(long orderId) {
@@ -91,7 +94,7 @@ public class OrderTable {
         return this.buyerIndex.findIndex(buyerId, startTime, endTime);
     }
 
-    public HashMap<String, String> findOrder(RecordIndex recordIndex) {
+    public HashMap<String, String> findOrderRecord(RecordIndex recordIndex) {
         HashMap<String, String> result = new HashMap<String, String>();
         String fileName = this.sortOrderFiles[recordIndex.getFileId()];
         try {
@@ -119,6 +122,21 @@ public class OrderTable {
             randomAccessFile.close();
         } catch (IOException e) {
             e.printStackTrace();
+        }
+        return result;
+    }
+
+    public HashMap<String, String> findOrder(RecordIndex recordIndex) {
+        long cacheIndex = (recordIndex.getAddress()<<6)|recordIndex.getFileId();
+        HashMap<String, String> result = resultCache.get(cacheIndex);
+        if (result == null) {
+            result = this.findOrderRecord(recordIndex);
+            if (result != null) {
+                resultCache.put(cacheIndex, result);
+            }
+        } else {
+//            System.out.println("命中缓存 orderId:" + result.get("orderid") + " fileId:"
+//                    + recordIndex.getFileId() + " address:" + recordIndex.getAddress());
         }
         return result;
     }

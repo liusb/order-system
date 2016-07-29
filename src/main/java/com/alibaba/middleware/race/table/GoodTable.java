@@ -1,6 +1,8 @@
 package com.alibaba.middleware.race.table;
 
 
+import com.alibaba.middleware.race.cache.TwoLevelCache;
+
 import java.util.Collection;
 import java.util.HashMap;
 
@@ -10,6 +12,8 @@ public class GoodTable {
         return instance;
     }
     private GoodTable() { }
+
+    private TwoLevelCache<String, HashMap<String, Object>> resultCache;
 
 //    private static final int TABLE_BUCKET_SIZE = 256;
 
@@ -30,9 +34,19 @@ public class GoodTable {
     // 在构造完，准备查询前重新打开，以只读方式打开，缓存为只读，
     public void reopen() {
         this.baseTable.reopen();
+        resultCache = new TwoLevelCache<String, HashMap<String, Object>>(512*1024, 128*1024);
     }
 
     public HashMap<String, Object> find(String goodId) {
-        return baseTable.findRecord(goodId);
+        HashMap<String, Object> result = resultCache.get(goodId);
+        if (result == null) {
+            result = this.baseTable.findRecord(goodId);
+            if (result != null) {
+                resultCache.put(goodId, result);
+            }
+        } else {
+//            System.out.println("命中缓存 goodId: " + goodId);
+        }
+        return result;
     }
 }
