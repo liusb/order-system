@@ -18,7 +18,7 @@ public class OrderTable {
 
 //    private static final int GOOD_INDEX_BUCKET_SIZE = 64;
 //    private static final int ORDER_INDEX_BUCKET_SIZE = 64;
-//    private static final int BUYER_INDEX_BUCKET_SIZE = 64;
+//    private static final int BUYER_INDEX_BUCKET_SIZE = 128;
 
     private static final int GOOD_INDEX_BUCKET_SIZE = 64*(1<<10);
     private static final int ORDER_INDEX_BUCKET_SIZE = 64*(1<<10);
@@ -98,7 +98,7 @@ public class OrderTable {
             RandomAccessFile randomAccessFile = new RandomAccessFile(fileName, "r");
             long fileSize = randomAccessFile.length();
             long pos = recordIndex.getAddress();
-            byte[] buffer = new byte[Math.min(2048, (int)(fileSize-pos))];
+            byte[] buffer = new byte[(int)Math.min(2048, fileSize-pos)];
             randomAccessFile.seek(pos);
             randomAccessFile.readFully(buffer);
             int begin = 0;
