@@ -1,6 +1,7 @@
 package com.alibaba.middleware.race.result;
 
 import com.alibaba.middleware.race.OrderSystem;
+import com.alibaba.middleware.race.type.ValueBoolean;
 
 public class KVImpl implements OrderSystem.KeyValue {
 
@@ -58,6 +59,14 @@ public class KVImpl implements OrderSystem.KeyValue {
     public boolean valueAsBoolean() throws OrderSystem.TypeException {
         if (value instanceof Boolean) {
             return ((Boolean) value);
+        } else if (value instanceof String){
+            if (value.equals(ValueBoolean.booleanFalseValue)) {
+                return false;
+            } else if (value.equals(ValueBoolean.booleanTrueValue)) {
+                return true;
+            } else {
+                throw new OrderSystem.TypeException();
+            }
         } else {
             throw new OrderSystem.TypeException();
         }
