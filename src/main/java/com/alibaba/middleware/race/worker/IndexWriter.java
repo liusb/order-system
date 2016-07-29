@@ -83,7 +83,7 @@ public class IndexWriter<T extends RowIndex> implements Runnable {
             pageFile.insertIndexData(bucketId, buffer);
             inCount++;
             if((inCount & ((1<<24)-1)) == 0) {
-                System.out.println("INFO: Write " + inCount + "Order used "
+                System.out.println("INFO: Write " + inCount + " Order used "
                         + (System.currentTimeMillis() - beginMillis) + "millis in thread " + threadId);
             }
         }
