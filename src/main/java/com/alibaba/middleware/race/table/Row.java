@@ -37,12 +37,7 @@ public class Row {
         }
         char firstChar = s.charAt(0);
         if (firstChar == '+') {  // 会丢失加号, 直接不转换
-//            return s;
-            try {
-                return Long.parseLong(s);
-            } catch (NumberFormatException e) {
-                return s;
-            }
+            return s;
         }
         if (firstChar == '-' && s.length()>1) {
             firstChar = s.charAt(1);
