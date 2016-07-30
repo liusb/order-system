@@ -30,7 +30,7 @@ public class OrderReader implements Runnable {
         int outSize = outs.size();
         long lineCount = 0;
         final int B_SIZE = 1024*1024;
-        final byte[] bArray = new byte[B_SIZE+2048];
+        final byte[] bArray = new byte[B_SIZE+1024];
         int maxLineSize = 0;
         try {
             for (Map.Entry<String, Byte> entry : this.files.entrySet()) {
