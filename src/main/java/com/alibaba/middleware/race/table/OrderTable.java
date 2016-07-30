@@ -26,8 +26,8 @@ public class OrderTable {
     private static final int GOOD_INDEX_BUCKET_SIZE = 64*BASE_SIZE;
     private static final int ORDER_INDEX_BUCKET_SIZE = 64*BASE_SIZE;
     private static final int BUYER_INDEX_BUCKET_SIZE = 128*BASE_SIZE;
-    private static final int FIRST_LEVEL_CACHE_SIZE = 2048*BASE_SIZE;
-    private static final int SECOND_LEVEL_CACHE_SIZE = 128*BASE_SIZE;
+    private static final int FIRST_LEVEL_CACHE_SIZE = 7*1024*BASE_SIZE;  // 0.21676k/record
+    private static final int SECOND_LEVEL_CACHE_SIZE = 2*1024*BASE_SIZE;
 
     // 每页的大小，单位为byte
     private static final int GOOD_TABLE_PAGE_SIZE = 4*(1<<10);

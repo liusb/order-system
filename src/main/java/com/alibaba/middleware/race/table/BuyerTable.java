@@ -15,8 +15,8 @@ public class BuyerTable {
     private TwoLevelCache<String, HashMap<String, Object>> resultCache;
 
     private static final int TABLE_BUCKET_SIZE = 256*OrderTable.BASE_SIZE;
-    private static final int FIRST_LEVEL_CACHE_SIZE = 256*OrderTable.BASE_SIZE;
-    private static final int SECOND_LEVEL_CACHE_SIZE = 384*OrderTable.BASE_SIZE;
+    private static final int FIRST_LEVEL_CACHE_SIZE = 3*1024*OrderTable.BASE_SIZE;  // 0.251125k/record
+    private static final int SECOND_LEVEL_CACHE_SIZE = 1024*OrderTable.BASE_SIZE;
 
     // 每页的大小，单位为byte
     private static final int TABLE_PAGE_SIZE = 4*(1<<10);
