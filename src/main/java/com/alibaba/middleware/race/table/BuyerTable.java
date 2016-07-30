@@ -14,9 +14,9 @@ public class BuyerTable {
 
     private TwoLevelCache<String, HashMap<String, Object>> resultCache;
 
-//    private static final int TABLE_BUCKET_SIZE = 256;
-
-    private static final int TABLE_BUCKET_SIZE = 256*(1<<10);
+    private static final int TABLE_BUCKET_SIZE = 256*OrderTable.BASE_SIZE;
+    private static final int FIRST_LEVEL_CACHE_SIZE = 256*OrderTable.BASE_SIZE;
+    private static final int SECOND_LEVEL_CACHE_SIZE = 384*OrderTable.BASE_SIZE;
 
     // 每页的大小，单位为byte
     private static final int TABLE_PAGE_SIZE = 4*(1<<10);
@@ -34,7 +34,7 @@ public class BuyerTable {
     // 在构造完，准备查询前重新打开，以只读方式打开，缓存为只读，
     public void reopen() {
         this.baseTable.reopen();
-        resultCache = new TwoLevelCache<String, HashMap<String, Object>>(512*1024, 128*1024);
+        resultCache = new TwoLevelCache<String, HashMap<String, Object>>(FIRST_LEVEL_CACHE_SIZE, SECOND_LEVEL_CACHE_SIZE);
     }
 
 
