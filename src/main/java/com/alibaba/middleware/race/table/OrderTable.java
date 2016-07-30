@@ -5,9 +5,13 @@ import com.alibaba.middleware.race.index.RecordIndex;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
+import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousFileChannel;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.util.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 public class OrderTable {
     private static OrderTable instance = new OrderTable();
@@ -18,13 +22,12 @@ public class OrderTable {
 
     private TwoLevelCache<Long, HashMap<String, String>> resultCache;
 
-//    private static final int GOOD_INDEX_BUCKET_SIZE = 64;
-//    private static final int ORDER_INDEX_BUCKET_SIZE = 64;
-//    private static final int BUYER_INDEX_BUCKET_SIZE = 128;
-
-    private static final int GOOD_INDEX_BUCKET_SIZE = 64*(1<<10);
-    private static final int ORDER_INDEX_BUCKET_SIZE = 64*(1<<10);
-    private static final int BUYER_INDEX_BUCKET_SIZE = 128*(1<<10);
+    public static final int BASE_SIZE = 1024;
+    private static final int GOOD_INDEX_BUCKET_SIZE = 64*BASE_SIZE;
+    private static final int ORDER_INDEX_BUCKET_SIZE = 64*BASE_SIZE;
+    private static final int BUYER_INDEX_BUCKET_SIZE = 128*BASE_SIZE;
+    private static final int FIRST_LEVEL_CACHE_SIZE = 2048*BASE_SIZE;
+    private static final int SECOND_LEVEL_CACHE_SIZE = 128*BASE_SIZE;
 
     // 每页的大小，单位为byte
     private static final int GOOD_TABLE_PAGE_SIZE = 4*(1<<10);
@@ -79,7 +82,7 @@ public class OrderTable {
         orderIndex.reopen();
         buyerIndex.reopen();
         this.prepared = true;
-        resultCache = new TwoLevelCache<Long, HashMap<String, String>>(2048*1024, 128*1024);
+        resultCache = new TwoLevelCache<Long, HashMap<String, String>>(FIRST_LEVEL_CACHE_SIZE, SECOND_LEVEL_CACHE_SIZE);
     }
 
     public RecordIndex findOderIdIndex(long orderId) {
@@ -143,9 +146,86 @@ public class OrderTable {
 
     public ArrayList<HashMap<String, String>> findOrders(ArrayList<RecordIndex> recordIndices) {
         ArrayList<HashMap<String, String>> results = new ArrayList<HashMap<String, String>>();
-        for (RecordIndex index: recordIndices) {
-            results.add(findOrder(index));
+        ArrayList<RecordIndex> notCache = new ArrayList<RecordIndex>();
+        HashMap<String, String> result;
+        long cacheIndex;
+        for (RecordIndex recordIndex: recordIndices) {
+            cacheIndex = (recordIndex.getAddress()<<6)|recordIndex.getFileId();
+            result = resultCache.get(cacheIndex);
+            if (result != null) {
+                results.add(result);
+            } else {
+                notCache.add(recordIndex);
+            }
+        }
+        try {
+            aioFindOrderRecord(notCache, results);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         return results;
+    }
+
+    class AioResult {
+        Future<Integer> future;
+        byte[] buffer;
+        RecordIndex index;
+        AioResult(Future<Integer> future, byte[] buffer, RecordIndex index) {
+            this.future = future;
+            this.buffer = buffer;
+            this.index = index;
+        }
+    }
+
+    private void aioFindOrderRecord(ArrayList<RecordIndex> recordIndexes, ArrayList<HashMap<String, String>> results)
+            throws IOException, ExecutionException, InterruptedException {
+        ArrayList<AioResult> aioResults = new ArrayList<AioResult>(recordIndexes.size());
+        Collections.sort(recordIndexes);
+        AsynchronousFileChannel[] channels = new AsynchronousFileChannel[43];
+        byte fileId;
+        for (RecordIndex recordIndex:recordIndexes) {
+            fileId = recordIndex.getFileId();
+            if (channels[fileId] == null) {
+                channels[fileId] = AsynchronousFileChannel.open(Paths.get(this.sortOrderFiles[fileId]),
+                        StandardOpenOption.READ);
+            }
+            byte[] buffer = new byte[600];
+            aioResults.add(new AioResult(channels[fileId].read(ByteBuffer.wrap(buffer), recordIndex.getAddress()),
+                    buffer, recordIndex));
+        }
+        while (!aioResults.isEmpty()) {
+            Iterator<AioResult> iterator = aioResults.iterator();
+            while (iterator.hasNext()) {
+                AioResult aioResult = iterator.next();
+                if (aioResult.future.isDone()) {
+                    int readLen = aioResult.future.get();
+                    HashMap<String, String> result = new HashMap<String, String>();
+                    byte[] buffer = aioResult.buffer;
+                    int begin = 0;
+                    String key = "";
+                    for (int i = 0; i < readLen; i++) {
+                        if (buffer[i] == '\n') {
+                            result.put(key, new String(buffer, begin, i - begin));
+                            break;
+                        }
+                        if (buffer[i] == ':') {
+                            key = new String(buffer, begin, i - begin);
+                            begin = i + 1;
+                        } else if (buffer[i] == '\t') {
+                            result.put(key, new String(buffer, begin, i - begin));
+                            begin = i + 1;
+                        }
+                    }
+                    results.add(result);
+                    resultCache.put((aioResult.index.getAddress()<<6)|aioResult.index.getFileId(), result);
+                    iterator.remove();
+                }
+            }
+        }
+        for (AsynchronousFileChannel channel: channels) {
+            if (channel != null) {
+                channel.close();
+            }
+        }
     }
 }
