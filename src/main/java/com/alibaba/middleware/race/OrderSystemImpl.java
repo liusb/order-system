@@ -111,8 +111,8 @@ public class OrderSystemImpl implements OrderSystem {
         }
 
         HashMap<String, String> orderRecord = null;
-        HashMap<String, String> goodRecord = null;
-        HashMap<String, String> buyerRecord = null;
+        HashMap<String, Object> goodRecord = null;
+        HashMap<String, Object> buyerRecord = null;
         if (keys == null || keys.size() > 0) {
             orderRecord = OrderTable.getInstance().findOrder(orderIdRowIndex);
         }
@@ -174,11 +174,11 @@ public class OrderSystemImpl implements OrderSystem {
         ArrayList<ResultImpl> results = new ArrayList<ResultImpl>();
         ArrayList<RecordIndex> buyerIdRowIndices = OrderTable.getInstance()
                 .findBuyerIdIndex(buyerId, startTime, endTime);
-        HashMap<String, String> buyerRecord = BuyerTable.getInstance().find(buyerId);
+        HashMap<String, Object> buyerRecord = BuyerTable.getInstance().find(buyerId);
         ArrayList<HashMap<String, String>>  orderRecords = OrderTable.getInstance().findOrders(buyerIdRowIndices);
         for (HashMap<String, String> order : orderRecords) {
             String goodId = order.get("goodid");
-            HashMap<String, String> goodRecord = GoodTable.getInstance().find(goodId);
+            HashMap<String, Object> goodRecord = GoodTable.getInstance().find(goodId);
             HashMap<String, KVImpl> result = joinResult(order, buyerRecord, goodRecord);
             results.add(new ResultImpl(Long.parseLong(order.get("orderid")),
                     result, Long.parseLong(order.get("createtime"))));
@@ -241,8 +241,8 @@ public class OrderSystemImpl implements OrderSystem {
 
         ArrayList<ResultImpl> results = new ArrayList<ResultImpl>();
         HashMap<String, KVImpl> result;
-        HashMap<String, String> goodRecord = null;
-        HashMap<String, String> buyerRecord = null;
+        HashMap<String, Object> goodRecord = null;
+        HashMap<String, Object> buyerRecord = null;
         if (goodTableKeys == null || goodTableKeys.size() > 0) {
             goodRecord = GoodTable.getInstance().find(goodId);
         }
@@ -304,7 +304,7 @@ public class OrderSystemImpl implements OrderSystem {
         if (goodRowIndex.isEmpty()) {
             return null;
         }
-        HashMap<String, String> goodRecord = null;
+        HashMap<String, Object> goodRecord = null;
         if (GoodTable.getInstance().baseTable.containColumn(key)) {
             goodRecord = GoodTable.getInstance().find(goodId);
             Object value = goodRecord.get(key);
@@ -337,7 +337,7 @@ public class OrderSystemImpl implements OrderSystem {
             if (!keyInBuyerTable) {
                 value = order.get(key);
             } else {
-                HashMap<String, String> buyerRecord = BuyerTable.getInstance().find(order.get("buyerid"));
+                HashMap<String, Object> buyerRecord = BuyerTable.getInstance().find(order.get("buyerid"));
                 value = buyerRecord.get(key);
             }
             if (value != null) {
@@ -376,16 +376,16 @@ public class OrderSystemImpl implements OrderSystem {
     }
 
     private HashMap<String, KVImpl> joinResult(HashMap<String, String> orderRecord,
-                                                 HashMap<String, String> buyerRecord,
-                                                 HashMap<String, String> goodRecord) {
+                                                 HashMap<String, Object> buyerRecord,
+                                                 HashMap<String, Object> goodRecord) {
         HashMap<String, KVImpl> result = new HashMap<String, KVImpl>();
         for (Map.Entry<String, String> entry: orderRecord.entrySet()) {
             result.put(entry.getKey(), new KVImpl(entry.getKey(), entry.getValue()));
         }
-        for (Map.Entry<String, String> entry: buyerRecord.entrySet()) {
+        for (Map.Entry<String, Object> entry: buyerRecord.entrySet()) {
             result.put(entry.getKey(), new KVImpl(entry.getKey(), entry.getValue()));
         }
-        for (Map.Entry<String, String> entry: goodRecord.entrySet()) {
+        for (Map.Entry<String, Object> entry: goodRecord.entrySet()) {
             result.put(entry.getKey(), new KVImpl(entry.getKey(), entry.getValue()));
         }
         return result;
