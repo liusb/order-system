@@ -218,4 +218,107 @@ public class Data {
         System.arraycopy(src.data, srcPos, this.data, this.pos, len);
         this.pos += len;
     }
+
+    public void writeKeyString(String s) {
+        byte[] buff = data;
+        int p = pos;
+        int len = s.length();
+        int prefix = ((s.charAt(0)-'a'+1)<<5) + (s.charAt(1)-'a'+1);
+        int prefixLen;
+        if (s.charAt(2) == '-') {
+            prefixLen=2;
+            prefix <<= 5;
+        } else {
+            prefixLen = 3;
+            prefix = (prefix<<5) + (s.charAt(2)-'a'+1);
+        }
+        buff[p++] = (byte)((prefix >> 8) & 0xff);
+        buff[p++] = (byte)(prefix & 0xff);
+        char ch;
+        byte chValue;
+        for (int i = prefixLen+1; i < len; i+=2) {
+            ch = s.charAt(i);
+            if (ch == '-') {
+                i--;
+                continue;
+            }
+            if (ch <= '9') {
+                chValue = (byte)(ch-'0');
+            } else {
+                chValue = (byte)(ch-'a'+10);
+            }
+            ch = s.charAt(i+1);
+            if (ch <= '9') {
+                chValue = (byte)((chValue<<4)|(ch-'0'));
+            } else {
+                chValue = (byte)((chValue<<4)|(ch-'a'+10));
+            }
+            buff[p++] = chValue;
+        }
+        pos = p;
+    }
+
+
+    public String readKeyString() {
+        byte[] buff = data;
+        int p = pos;
+        char[] chars = new char[21];
+        int prefix = buff[p++];
+        prefix = (prefix << 8) + (buff[p++]&0xff);
+        chars[0] = (char)((prefix >> 10) - 1 + 'a');
+        chars[1] = (char)(((prefix & 0x3ff)>>5) - 1 + 'a');
+        int prefixLen;
+        if ((prefix & 0x1F) == 0) {
+            prefixLen = 2;
+        } else {
+            prefixLen = 3;
+            chars[2] = (char)((prefix & 0x1f)-1+'a');
+        }
+        chars[prefixLen] = '-';
+        byte byteValue;
+        char ch;
+        int i;
+        for (i = prefixLen+1; i < prefixLen+5; i+=2) {
+            byteValue = buff[p++];
+            ch = (char)(byteValue & 0xf);
+            if (ch < 10) {
+                chars[i+1] = (char)(ch+'0');
+            } else {
+                chars[i+1] = (char)(ch- 10 + 'a');
+            }
+            ch = (char)((byteValue >> 4) & 0xf);
+            if (ch < 10) {
+                chars[i] = (char)(ch+'0');
+            } else {
+                chars[i] = (char)(ch- 10 + 'a');
+            }
+        }
+        for (chars[i++] = '-'; i < prefixLen+18; i+=2) {
+            byteValue = buff[p++];
+            ch = (char)(byteValue & 0xf);
+            if (ch < 10) {
+                chars[i+1] = (char)(ch+'0');
+            } else {
+                chars[i+1] = (char)(ch- 10 + 'a');
+            }
+            ch = (char)((byteValue >> 4) & 0xf);
+            if (ch < 10) {
+                chars[i] = (char)(ch+'0');
+            } else {
+                chars[i] = (char)(ch- 10 + 'a');
+            }
+        }
+        pos = p;
+        return new String(chars, 0, 18+prefixLen);
+    }
+
+
+    public static void main(String[] args) {
+        Data data = new Data(new byte[32]);
+        data.writeKeyString("al-96e5-7fac3721d4b9");
+        data.writeKeyString("aye-b67f-e66c3c567820");
+        data.reset();
+        System.out.println(data.readKeyString());
+        System.out.println(data.readKeyString().equals("aye-b67f-e66c3c567820"));
+    }
 }
