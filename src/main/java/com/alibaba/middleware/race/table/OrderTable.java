@@ -25,7 +25,7 @@ public class OrderTable {
 
     private TwoLevelCache<Long, HashMap<String, String>> resultCache;
 
-    public static final int BASE_SIZE = 1024;
+    public static final int BASE_SIZE = 1;
     private static final int GOOD_INDEX_BUCKET_SIZE = 64*BASE_SIZE;
     private static final int ORDER_INDEX_BUCKET_SIZE = 64*BASE_SIZE;
     private static final int BUYER_INDEX_BUCKET_SIZE = 128*BASE_SIZE;
@@ -64,13 +64,10 @@ public class OrderTable {
         buyerIndex.init(storeFolders, BUYER_INDEX_BUCKET_SIZE, BUYER_INDEX_PAGE_SIZE);
 
         orderFilesMap = new HashMap<String, Byte>(43);
+        sortOrderFiles = new String[43];
         for (String file: orderFiles) {
             byte postfix = (byte)Integer.parseInt(file.substring(file.lastIndexOf('.')+1));
             orderFilesMap.put(file, postfix);
-        }
-        sortOrderFiles = new String[43];
-        for (String file: orderFiles) {
-            int postfix = Integer.parseInt(file.substring(file.lastIndexOf('.')+1));
             sortOrderFiles[postfix] = file;
         }
     }
