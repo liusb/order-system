@@ -12,6 +12,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 public class WorkerManager implements Runnable {
 
+    private static final int READER_THREAD_NUM = 9;
     private static final int PARSER_THREAD_NUM = 16;
     private static final int IN_QUEUE_SIZE = 1024;
     private static final int OUT_QUEUE_SIZE = 16*1024;
@@ -159,7 +160,7 @@ public class WorkerManager implements Runnable {
                 = createQueues(table.orderIndex.getPageFiles().size(), OUT_QUEUE_SIZE);
         ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexQueues
                 = createQueues(table.buyerIndex.getPageFiles().size(), OUT_QUEUE_SIZE);
-        ArrayList<OrderReader> readers = createReaders(table.orderFilesMap, inQueues);
+        ArrayList<OrderReader> readers = createReaders(table.sortOrderFiles, table.orderFilesMap.size(), inQueues);
         ArrayList<OrderParser> parsers = createOrderParser(inQueues, goodIndexQueues, orderIndexQueues, buyerIndexQueues,
                 goodIndexIndex, orderIndexIndex, buyerIndexIndex);
         ArrayList<IndexWriter<GoodIdRowIndex>> goodIndexWriters = createIndexWriter(goodIndexQueues,
@@ -312,20 +313,18 @@ public class WorkerManager implements Runnable {
         metric.addQueue(name, addQueues);
     }
 
-    private static ArrayList<OrderReader> createReaders(Map<String, Byte> files,
+    private static ArrayList<OrderReader> createReaders(String[] sortedFiles, int size,
                                                    ArrayList<LinkedBlockingQueue<OrderLine>> inQueues) {
-        HashMap<String, HashMap<String, Byte>> fileSplits = new HashMap<String, HashMap<String, Byte>>(3);
-        for (Map.Entry<String, Byte> file: files.entrySet()) {
-            String fileName = file.getKey();
-            String prefix = fileName.substring(0, fileName.lastIndexOf('/'));
-            if (!fileSplits.containsKey(prefix)) {
-                fileSplits.put(prefix, new HashMap<String, Byte>());
-            }
-            fileSplits.get(prefix).put(fileName, file.getValue());
+        ArrayList<HashMap<String, Byte>> fileSplits = new ArrayList<HashMap<String, Byte>>(READER_THREAD_NUM);
+        for (int i=0; i<READER_THREAD_NUM; i++) {
+            fileSplits.add(new HashMap<String, Byte>());
+        }
+        for (int i=0; i<size; i++) {
+            fileSplits.get(i%READER_THREAD_NUM).put(sortedFiles[i], (byte)i);
         }
         ArrayList<OrderReader> readers = new ArrayList<OrderReader>();
-        for (Map.Entry<String, HashMap<String, Byte>> entry: fileSplits.entrySet()) {
-            readers.add(new OrderReader(entry.getValue(), inQueues));
+        for (HashMap<String, Byte> spilt: fileSplits) {
+            readers.add(new OrderReader(spilt, inQueues));
         }
         return readers;
     }

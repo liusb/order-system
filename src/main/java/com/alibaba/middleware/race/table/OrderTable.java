@@ -44,7 +44,7 @@ public class OrderTable {
     public HashTable buyerIndex;
 
     public HashMap<String, Byte> orderFilesMap;
-    private String[] sortOrderFiles;
+    public String[] sortOrderFiles;
 
     public void init(Collection<String> storeFolders, Collection<String> orderFiles) {
         goodIndex = new HashTable("orderTable");
