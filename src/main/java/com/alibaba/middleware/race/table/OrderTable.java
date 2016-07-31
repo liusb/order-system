@@ -2,6 +2,8 @@ package com.alibaba.middleware.race.table;
 
 import com.alibaba.middleware.race.cache.TwoLevelCache;
 import com.alibaba.middleware.race.index.RecordIndex;
+import com.alibaba.middleware.race.query.RecordAttachment;
+import com.alibaba.middleware.race.query.RecordHandler;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -10,6 +12,7 @@ import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -45,6 +48,7 @@ public class OrderTable {
 
     public HashMap<String, Byte> orderFilesMap;
     public String[] sortOrderFiles;
+    private AsynchronousFileChannel[] fileChannels;
 
     public void init(Collection<String> storeFolders, Collection<String> orderFiles) {
         goodIndex = new HashTable("orderTable");
@@ -83,6 +87,7 @@ public class OrderTable {
         buyerIndex.reopen();
         this.prepared = true;
         resultCache = new TwoLevelCache<Long, HashMap<String, String>>(FIRST_LEVEL_CACHE_SIZE, SECOND_LEVEL_CACHE_SIZE);
+        this.fileChannels = new AsynchronousFileChannel[this.sortOrderFiles.length];
     }
 
     public RecordIndex findOderIdIndex(long orderId) {
@@ -159,7 +164,7 @@ public class OrderTable {
             }
         }
         try {
-            aioFindOrderRecord(notCache, results);
+            FindOrderRecord(notCache, results);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -226,6 +231,32 @@ public class OrderTable {
             if (channel != null) {
                 channel.close();
             }
+        }
+    }
+
+    private void FindOrderRecord(ArrayList<RecordIndex> recordIndexes, ArrayList<HashMap<String, String>> results)
+            throws IOException, ExecutionException, InterruptedException {
+        CountDownLatch latch = new CountDownLatch(recordIndexes.size());
+        ArrayList<RecordAttachment> attachments = new ArrayList<RecordAttachment>(recordIndexes.size());
+        Collections.sort(recordIndexes);
+        byte fileId;
+        RecordHandler recordHandler = new RecordHandler();
+        for (RecordIndex recordIndex:recordIndexes) {
+            fileId = recordIndex.getFileId();
+            if (this.fileChannels[fileId] == null) {
+                this.fileChannels[fileId] = AsynchronousFileChannel.open(Paths.get(this.sortOrderFiles[fileId]),
+                        StandardOpenOption.READ);
+            }
+            RecordAttachment attachment = new RecordAttachment(latch, recordIndex);
+            attachments.add(attachment);
+            this.fileChannels[fileId].read(ByteBuffer.wrap(attachment.buffer), recordIndex.getAddress(),
+                    attachment, recordHandler);
+        }
+        latch.await();
+        for (RecordAttachment attachment: attachments) {
+            results.add(attachment.record);
+            resultCache.put((attachment.recordIndex.getAddress() << 6) | attachment.recordIndex.getFileId(),
+                    attachment.record);
         }
     }
 }

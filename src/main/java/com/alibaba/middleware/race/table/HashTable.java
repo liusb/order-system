@@ -67,7 +67,10 @@ public class HashTable extends Table {
         if (!pageStore.isBucketUsed(bucketIndex)) {
             return results;
         }
-        String readString;
+        short prefix = Data.getKeyPrefix(buyerId);
+        short readPrefix;
+        long postfix = Data.getKeyPostfix(buyerId);
+        long readPostfix;
         long readTime;
         DataPage page;
         Data data;
@@ -76,18 +79,23 @@ public class HashTable extends Table {
             data = new Data(page.getData().getBytes(), DataPage.HeaderLength);
             // [buyerId(string), createTime(long), address(long<<6)|fileId(byte)]
             while (data.getPos() < page.getDataLen()) {
-                readString = data.readKeyString();
-                if (readString.equals(buyerId)) {
-                    readTime = data.readLong();
-                    if (readTime >= startTime && readTime < endTime) {
-                        long address = data.readLong();
-                        RecordIndex result = new RecordIndex((byte)(address&0x3F), address>>6);
-                        results.add(result);
+                readPrefix = data.readShort();
+                if (readPrefix == prefix) {
+                    readPostfix = data.readLong();
+                    if (readPostfix == postfix) {
+                        readTime = data.readLong();
+                        if (readTime >= startTime && readTime < endTime) {
+                            long address = data.readLong();
+                            RecordIndex result = new RecordIndex((byte) (address & 0x3F), address >> 6);
+                            results.add(result);
+                        } else {
+                            data.skip(8);
+                        }
                     } else {
-                        data.skip(8);
+                        data.skip(8+8);
                     }
                 } else {
-                    data.skip(8+8);
+                    data.skip(8+8+8);
                 }
             }
             bucketIndex = page.getNextPage();
@@ -137,7 +145,10 @@ public class HashTable extends Table {
         if (!pageStore.isBucketUsed(bucketIndex)) {
             return results;
         }
-        String readString;
+        short prefix = Data.getKeyPrefix(goodId);
+        short readPrefix;
+        long postfix = Data.getKeyPostfix(goodId);
+        long readPostfix;
         DataPage page;
         Data data;
         while (true) {
@@ -145,13 +156,18 @@ public class HashTable extends Table {
             data = new Data(page.getData().getBytes(), DataPage.HeaderLength);
             // [goodId(string), address(long<<6)|fileId(byte)]
             while (data.getPos() < page.getDataLen()) {
-                readString = data.readKeyString();
-                if (readString.equals(goodId)) {
-                    long address = data.readLong();
-                    RecordIndex result = new RecordIndex((byte)(address&0x3F), address>>6);
-                    results.add(result);
+                readPrefix = data.readShort();
+                if (readPrefix == prefix) {
+                    readPostfix = data.readLong();
+                    if (readPostfix == postfix) {
+                        long address = data.readLong();
+                        RecordIndex result = new RecordIndex((byte) (address & 0x3F), address >> 6);
+                        results.add(result);
+                    } else {
+                        data.skip(8);
+                    }
                 } else {
-                    data.skip(8);
+                    data.skip(8+8);
                 }
             }
             bucketIndex = page.getNextPage();

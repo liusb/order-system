@@ -81,6 +81,20 @@ public class Data {
         return x;
     }
 
+    public void writeShort(short x) {
+        byte[] buff = data;
+        buff[pos] = (byte) (x >> 8);
+        buff[pos + 1] = (byte) x;
+        pos += 2;
+    }
+
+    public short readShort() {
+        byte[] buff = data;
+        short x = (short)((buff[pos] << 8) + (buff[pos+1] & 0xff));
+        pos += 2;
+        return x;
+    }
+
     public void writeVarInt(int x) {
         while ((x & ~0x7f) != 0) {
             data[pos++] = (byte) (0x80 | (x & 0x7f));
@@ -219,7 +233,7 @@ public class Data {
         this.pos += len;
     }
 
-    public void writeKeyString(String s) {
+    public void writeKeyString2(String s) {
         byte[] buff = data;
         int p = pos;
         int len = s.length();
@@ -258,6 +272,12 @@ public class Data {
         pos = p;
     }
 
+    public void writeKeyString(String s) {
+        short prefix = getKeyPrefix(s);
+        long postfix = getKeyPostfix(s);
+        writeShort(prefix);
+        writeLong(postfix);
+    }
 
     public String readKeyString() {
         byte[] buff = data;
@@ -312,6 +332,35 @@ public class Data {
         return new String(chars, 0, 18+prefixLen);
     }
 
+    public static short getKeyPrefix(String s) {
+        int prefix = ((s.charAt(0)-'a'+1)<<5) + (s.charAt(1)-'a'+1);
+        if (s.charAt(2) == '-') {
+            prefix <<= 5;
+        } else {
+            prefix = (prefix<<5) + (s.charAt(2)-'a' +1);
+        }
+        return (short)(prefix);
+    }
+
+    public static long getKeyPostfix(String s) {
+        int len = s.length();
+        int prefixLen = (len==20)?3:4;
+        char ch;
+        long value = 0;
+        for (int i = prefixLen; i < len; i++) {
+            ch = s.charAt(i);
+            if (ch == '-') {
+                continue;
+            }
+            value <<= 4;
+            if (ch <= '9') {
+                value |= (byte) (ch - '0');
+            } else {
+                value |= (byte) (ch - 'a' + 10);
+            }
+        }
+        return value;
+    }
 
     public static void main(String[] args) {
         Data data = new Data(new byte[32]);
