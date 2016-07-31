@@ -2,12 +2,12 @@ package com.alibaba.middleware.race.table;
 
 import com.alibaba.middleware.race.index.RecordIndex;
 
-public class OrderLine {
+public class OffsetLine {
 
     private RecordIndex recodeIndex;
     String line;
 
-    public OrderLine(RecordIndex recodeIndex, String line) {
+    public OffsetLine(RecordIndex recodeIndex, String line) {
         this.recodeIndex = recodeIndex;
         this.line = line;
     }

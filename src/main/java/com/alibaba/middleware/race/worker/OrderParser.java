@@ -1,15 +1,15 @@
 package com.alibaba.middleware.race.worker;
 
 import com.alibaba.middleware.race.index.*;
-import com.alibaba.middleware.race.table.OrderLine;
+import com.alibaba.middleware.race.table.OffsetLine;
 
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class OrderParser implements Runnable {
-    private LinkedBlockingQueue<OrderLine> in;
-    private OrderLine line;
+    private LinkedBlockingQueue<OffsetLine> in;
+    private OffsetLine line;
     private ArrayList<LinkedBlockingQueue<GoodIdRowIndex>> goodIndexOuts;
     private ArrayList<LinkedBlockingQueue<OrderIdRowIndex>> orderIndexOuts;
     private ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexOuts;
@@ -19,7 +19,7 @@ public class OrderParser implements Runnable {
     private int rowCount;
     private long threadId;
 
-    public OrderParser(LinkedBlockingQueue<OrderLine> inQueue,
+    public OrderParser(LinkedBlockingQueue<OffsetLine> inQueue,
                        ArrayList<LinkedBlockingQueue<GoodIdRowIndex>> goodOIndexQueues,
                        ArrayList<LinkedBlockingQueue<OrderIdRowIndex>> orderIndexQueues,
                        ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexQueues,

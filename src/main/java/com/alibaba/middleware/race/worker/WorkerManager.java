@@ -1,5 +1,6 @@
 package com.alibaba.middleware.race.worker;
 
+import com.alibaba.middleware.race.cache.IndexCache;
 import com.alibaba.middleware.race.index.*;
 import com.alibaba.middleware.race.store.PageStore;
 import com.alibaba.middleware.race.table.*;
@@ -7,12 +8,11 @@ import com.alibaba.middleware.race.table.*;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class WorkerManager implements Runnable {
 
-    private static final int READER_THREAD_NUM = 9;
+    private static final int ORDER_READER_THREAD_NUM = 9;
     private static final int PARSER_THREAD_NUM = 20;
     private static final int IN_QUEUE_SIZE = 1024;
     private static final int OUT_QUEUE_SIZE = 16*1024;
@@ -23,8 +23,7 @@ public class WorkerManager implements Runnable {
     private Collection<String> buyerFiles;
     private Collection<String> goodFiles;
 
-    private final static String emptyLine = "";
-    private final static Row emptyRow = new Row();
+    private final static OffsetLine emptyLine = new OffsetLine(null, "");
     private final static GoodIdRowIndex emptyGoodIdRowIndex
             = new GoodIdRowIndex(new RecordIndex((byte)0, -1), 0, "");
     private final static OrderIdRowIndex emptyOrderIdRowIndex
@@ -51,98 +50,78 @@ public class WorkerManager implements Runnable {
     @Override
     public void run() {
         long beginTime = System.currentTimeMillis();
+        processOrderRecord();
+        System.out.println("Order Time =====>" + (System.currentTimeMillis() - beginTime));
         processGoodRecord();
         System.out.println("Good Time ====>" + (System.currentTimeMillis() - beginTime));
         processBuyerRecord();
         System.out.println("Buyer Time =====>" + (System.currentTimeMillis() - beginTime));
-        processOrderRecord();
-        System.out.println("Order Time =====>" + (System.currentTimeMillis() - beginTime));
 
-        BuyerTable.getInstance().reopen();
         GoodTable.getInstance().reopen();
+        BuyerTable.getInstance().reopen();
         OrderTable.getInstance().reopen();
     }
 
     private void processGoodRecord() {
         GoodTable table = GoodTable.getInstance();
-        table.init(this.storeFolders);
-        ArrayList<LinkedBlockingQueue<String>> inQueues = createQueues(PARSER_THREAD_NUM, IN_QUEUE_SIZE);
-        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(table.baseTable.getPageFiles().size(), OUT_QUEUE_SIZE);
-        ArrayList<Reader> readers = createReaders(goodFiles, inQueues);
-        ArrayList<Parser> parsers = createParser(inQueues, outQueues, table.baseTable);
-        ArrayList<Writer> writers = createWriter(outQueues, table.baseTable);
+        table.init(this.storeFolders, this.goodFiles);
+        ArrayList<LinkedBlockingQueue<OffsetLine>> inQueues = createQueues(PARSER_THREAD_NUM, IN_QUEUE_SIZE);
+        ArrayList<OffsetReader> readers = createOffsetReaders(table.sortGoodFiles, table.goodFilesMap.size(),
+                inQueues, table.goodFilesMap.size());
+        ArrayList<OffsetParser> parsers = createOffsetParser(inQueues, table.indexCache, table.baseTable);
         ArrayList<Thread> readerThreads = new ArrayList<Thread>();
-        for (Reader reader: readers) {
+        for (OffsetReader reader: readers) {
             readerThreads.add(new Thread(reader));
         }
         ArrayList<Thread> parserThreads = new ArrayList<Thread>();
-        for (Parser parser: parsers) {
+        for (OffsetParser parser: parsers) {
             parserThreads.add(new Thread(parser));
-        }
-        ArrayList<Thread> writerThreads = new ArrayList<Thread>();
-        for (Writer writer: writers) {
-            writerThreads.add(new Thread(writer));
         }
 
         Metric metric = new Metric();
         addQueueToMetric(metric, "Good inQueue ", inQueues);
-        addQueueToMetric(metric, "Good outQueue ", outQueues);
         metric.setSleepMills(MetricTime);
         Thread metricThread = new Thread(metric);
         metricThread.start();
 
         startThreads(readerThreads);
         startThreads(parserThreads);
-        startThreads(writerThreads);
         waitThreads(readerThreads);
 
         sendEndMsg(inQueues, emptyLine);
         waitThreads(parserThreads);
-
-        sendEndMsg(outQueues, emptyRow);
-        waitThreads(writerThreads);
 
         metric.setStop();
     }
 
     private void processBuyerRecord() {
         BuyerTable table = BuyerTable.getInstance();
-        table.init(this.storeFolders);
-        ArrayList<LinkedBlockingQueue<String>> inQueues = createQueues(PARSER_THREAD_NUM, IN_QUEUE_SIZE);
-        ArrayList<LinkedBlockingQueue<Row>> outQueues = createQueues(table.baseTable.getPageFiles().size(), OUT_QUEUE_SIZE);
-        ArrayList<Reader> readers = createReaders(buyerFiles, inQueues);
-        ArrayList<Parser> parsers = createParser(inQueues, outQueues, table.baseTable);
-        ArrayList<Writer> writers = createWriter(outQueues, table.baseTable);
+        table.init(this.storeFolders, this.buyerFiles);
+        ArrayList<LinkedBlockingQueue<OffsetLine>> inQueues = createQueues(PARSER_THREAD_NUM, IN_QUEUE_SIZE);
+        ArrayList<OffsetReader> readers = createOffsetReaders(table.sortBuyerFiles, table.buyerFilesMap.size(),
+                inQueues, table.buyerFilesMap.size());
+        ArrayList<OffsetParser> parsers = createOffsetParser(inQueues, table.indexCache, table.baseTable);
         ArrayList<Thread> readerThreads = new ArrayList<Thread>();
-        for (Reader reader: readers) {
+        for (OffsetReader reader: readers) {
             readerThreads.add(new Thread(reader));
         }
         ArrayList<Thread> parserThreads = new ArrayList<Thread>();
-        for (Parser parser: parsers) {
+        for (OffsetParser parser: parsers) {
             parserThreads.add(new Thread(parser));
-        }
-        ArrayList<Thread> writerThreads = new ArrayList<Thread>();
-        for (Writer writer: writers) {
-            writerThreads.add(new Thread(writer));
         }
 
         Metric metric = new Metric();
         addQueueToMetric(metric, "Buyer inQueue ", inQueues);
-        addQueueToMetric(metric, "Buyer outQueue ", outQueues);
         metric.setSleepMills(MetricTime);
         Thread metricThread = new Thread(metric);
         metricThread.start();
 
         startThreads(readerThreads);
         startThreads(parserThreads);
-        startThreads(writerThreads);
         waitThreads(readerThreads);
 
         sendEndMsg(inQueues, emptyLine);
         waitThreads(parserThreads);
-
-        sendEndMsg(outQueues, emptyRow);
-        waitThreads(writerThreads);
 
         metric.setStop();
     }
@@ -153,14 +132,15 @@ public class WorkerManager implements Runnable {
         HashIndex goodIndexIndex = table.goodIndex.getIndex();
         HashIndex orderIndexIndex = table.orderIndex.getIndex();
         HashIndex buyerIndexIndex = table.buyerIndex.getIndex();
-        ArrayList<LinkedBlockingQueue<OrderLine>> inQueues = createQueues(PARSER_THREAD_NUM, IN_QUEUE_SIZE);
+        ArrayList<LinkedBlockingQueue<OffsetLine>> inQueues = createQueues(PARSER_THREAD_NUM, IN_QUEUE_SIZE);
         ArrayList<LinkedBlockingQueue<GoodIdRowIndex>> goodIndexQueues
                 = createQueues(table.goodIndex.getPageFiles().size(), OUT_QUEUE_SIZE);
         ArrayList<LinkedBlockingQueue<OrderIdRowIndex>> orderIndexQueues
                 = createQueues(table.orderIndex.getPageFiles().size(), OUT_QUEUE_SIZE);
         ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexQueues
                 = createQueues(table.buyerIndex.getPageFiles().size(), OUT_QUEUE_SIZE);
-        ArrayList<OrderReader> readers = createReaders(table.sortOrderFiles, table.orderFilesMap.size(), inQueues);
+        ArrayList<OffsetReader> readers = createOffsetReaders(table.sortOrderFiles, table.orderFilesMap.size(),
+                inQueues, table.orderFilesMap.size());
         ArrayList<OrderParser> parsers = createOrderParser(inQueues, goodIndexQueues, orderIndexQueues, buyerIndexQueues,
                 goodIndexIndex, orderIndexIndex, buyerIndexIndex);
         ArrayList<IndexWriter<GoodIdRowIndex>> goodIndexWriters = createIndexWriter(goodIndexQueues,
@@ -171,7 +151,7 @@ public class WorkerManager implements Runnable {
                 table.buyerIndex.getPageFiles(), buyerIndexIndex);
 
         ArrayList<Thread> readerThreads = new ArrayList<Thread>();
-        for (OrderReader reader: readers) {
+        for (OffsetReader reader: readers) {
             readerThreads.add(new Thread(reader));
         }
         ArrayList<Thread> parserThreads = new ArrayList<Thread>();
@@ -208,7 +188,7 @@ public class WorkerManager implements Runnable {
         startThreads(buyerIndexWriterThreads);
 
         waitThreads(readerThreads);
-        sendEndMsg(inQueues, new OrderLine(null, ""));
+        sendEndMsg(inQueues, new OffsetLine(null, ""));
         waitThreads(parserThreads);
 
         sendEndMsg(goodIndexQueues, emptyGoodIdRowIndex);
@@ -260,40 +240,13 @@ public class WorkerManager implements Runnable {
         return queues;
     }
 
-    private static ArrayList<Reader> createReaders(Collection<String> files,
-                                                   ArrayList<LinkedBlockingQueue<String>> inQueues) {
-        HashMap<String, ArrayList<String>> fileSplits = new HashMap<String, ArrayList<String>>(3);
-        for (String file: files) {
-            String prefix = file.substring(0, file.lastIndexOf('/'));
-            if (!fileSplits.containsKey(prefix)) {
-                fileSplits.put(prefix, new ArrayList<String>());
-            }
-            fileSplits.get(prefix).add(file);
-        }
-        ArrayList<Reader> readers = new ArrayList<Reader>();
-        for (Map.Entry<String, ArrayList<String>> entry: fileSplits.entrySet()) {
-            readers.add(new Reader(entry.getValue(), inQueues));
-        }
-        return readers;
-    }
-
-    private static ArrayList<Parser> createParser(ArrayList<LinkedBlockingQueue<String>> inQueues,
-                                                  ArrayList<LinkedBlockingQueue<Row>> outQueues,
-                                                  HashTable table) {
-        ArrayList<Parser> parsers = new ArrayList<Parser>();
-        for (LinkedBlockingQueue<String> queue: inQueues) {
-            parsers.add(new Parser(queue, outQueues, table, table.getIndex()));
+    private static ArrayList<OffsetParser> createOffsetParser(ArrayList<LinkedBlockingQueue<OffsetLine>> inQueues,
+                                                       IndexCache indexCache, HashTable table) {
+        ArrayList<OffsetParser> parsers = new ArrayList<OffsetParser>();
+        for (LinkedBlockingQueue<OffsetLine> queue: inQueues) {
+            parsers.add(new OffsetParser(queue, indexCache, table));
         }
         return parsers;
-    }
-
-    private static ArrayList<Writer> createWriter(ArrayList<LinkedBlockingQueue<Row>> outQueues,
-                                                  HashTable table) {
-        ArrayList<Writer> writers = new ArrayList<Writer>();
-        for (int i=0; i< outQueues.size(); i++) {
-            writers.add(new Writer(outQueues.get(i), table.getPageFiles().get(i), table.getIndex()));
-        }
-        return writers;
     }
 
     private static <T extends RowIndex> ArrayList<IndexWriter<T>> createIndexWriter(
@@ -313,30 +266,31 @@ public class WorkerManager implements Runnable {
         metric.addQueue(name, addQueues);
     }
 
-    private static ArrayList<OrderReader> createReaders(String[] sortedFiles, int size,
-                                                   ArrayList<LinkedBlockingQueue<OrderLine>> inQueues) {
-        ArrayList<HashMap<String, Byte>> fileSplits = new ArrayList<HashMap<String, Byte>>(READER_THREAD_NUM);
-        for (int i=0; i<READER_THREAD_NUM; i++) {
+    private static ArrayList<OffsetReader> createOffsetReaders(String[] sortedFiles, int size,
+                                                         ArrayList<LinkedBlockingQueue<OffsetLine>> inQueues,
+                                                         int readThreadNum) {
+        ArrayList<HashMap<String, Byte>> fileSplits = new ArrayList<HashMap<String, Byte>>(readThreadNum);
+        for (int i=0; i<readThreadNum; i++) {
             fileSplits.add(new HashMap<String, Byte>());
         }
         for (int i=0; i<size; i++) {
-            fileSplits.get(i%READER_THREAD_NUM).put(sortedFiles[i], (byte)i);
+            fileSplits.get(i%readThreadNum).put(sortedFiles[i], (byte)i);
         }
-        ArrayList<OrderReader> readers = new ArrayList<OrderReader>();
+        ArrayList<OffsetReader> readers = new ArrayList<OffsetReader>();
         for (HashMap<String, Byte> spilt: fileSplits) {
-            readers.add(new OrderReader(spilt, inQueues));
+            readers.add(new OffsetReader(spilt, inQueues));
         }
         return readers;
     }
 
-    private static ArrayList<OrderParser> createOrderParser(ArrayList<LinkedBlockingQueue<OrderLine>> inQueues,
+    private static ArrayList<OrderParser> createOrderParser(ArrayList<LinkedBlockingQueue<OffsetLine>> inQueues,
                                                        ArrayList<LinkedBlockingQueue<GoodIdRowIndex>> goodOIndexQueues,
                                                        ArrayList<LinkedBlockingQueue<OrderIdRowIndex>> orderIndexQueues,
                                                        ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexQueues,
                                                        HashIndex goodIndexIndex, HashIndex orderIndexIndex,
                                                        HashIndex buyerIndexIndex) {
         ArrayList<OrderParser> parsers = new ArrayList<OrderParser>();
-        for (LinkedBlockingQueue<OrderLine> queue: inQueues) {
+        for (LinkedBlockingQueue<OffsetLine> queue: inQueues) {
             parsers.add(new OrderParser(queue, goodOIndexQueues, orderIndexQueues,buyerIndexQueues,
                     goodIndexIndex, orderIndexIndex, buyerIndexIndex));
         }

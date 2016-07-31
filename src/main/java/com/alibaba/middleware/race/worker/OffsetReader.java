@@ -1,7 +1,7 @@
 package com.alibaba.middleware.race.worker;
 
 import com.alibaba.middleware.race.index.RecordIndex;
-import com.alibaba.middleware.race.table.OrderLine;
+import com.alibaba.middleware.race.table.OffsetLine;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -13,11 +13,11 @@ import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-public class OrderReader implements Runnable {
-    private ArrayList<LinkedBlockingQueue<OrderLine>> outs;
+public class OffsetReader implements Runnable {
+    private ArrayList<LinkedBlockingQueue<OffsetLine>> outs;
     private HashMap<String, Byte> files;
 
-    public OrderReader(HashMap<String, Byte> files, ArrayList<LinkedBlockingQueue<OrderLine>> outs) {
+    public OffsetReader(HashMap<String, Byte> files, ArrayList<LinkedBlockingQueue<OffsetLine>> outs) {
         this.outs = outs;
         this.files = files;
     }
@@ -48,7 +48,7 @@ public class OrderReader implements Runnable {
                     for (bArrayDataSize = bArrayOffset + getSize; bArrayOffset < bArrayDataSize; bArrayOffset++) {
                         if (bArray[bArrayOffset]=='\n') {
                             lineLength = bArrayOffset-lineBegin;
-                            OrderLine orderLine = new OrderLine(new RecordIndex(fileId, nextLineOffset),
+                            OffsetLine orderLine = new OffsetLine(new RecordIndex(fileId, nextLineOffset),
                                     new String(bArray, lineBegin, lineLength));
                             if (maxLineSize < lineLength) {
                                 maxLineSize = lineLength;
