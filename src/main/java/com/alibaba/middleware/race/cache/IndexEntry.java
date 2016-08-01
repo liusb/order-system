@@ -1,8 +1,6 @@
 package com.alibaba.middleware.race.cache;
 
 
-import com.alibaba.middleware.race.index.RecordIndex;
-
 public class IndexEntry implements Comparable<IndexEntry> {
     public short prefix;
     private byte fileId;
@@ -23,7 +21,7 @@ public class IndexEntry implements Comparable<IndexEntry> {
     }
 
     public long getAddress() {
-        return offset;
+        return 0xffffffffL&offset;
     }
 
     public int getLength() {
