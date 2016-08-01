@@ -45,6 +45,8 @@ public class Compressor {
     }
 
     public static void main(String[] args) {
+        int s = -1;
+        long x = s;
         LineReader lineReader = new LineReader("./prerun_data/disk1/order.0.3");
         String line;
         byte[] strByte;

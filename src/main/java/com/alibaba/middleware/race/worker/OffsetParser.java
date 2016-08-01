@@ -4,7 +4,7 @@ import com.alibaba.middleware.race.cache.IndexCache;
 import com.alibaba.middleware.race.cache.IndexEntry;
 import com.alibaba.middleware.race.index.RecordIndex;
 import com.alibaba.middleware.race.store.Data;
-import com.alibaba.middleware.race.table.HashTable;
+import com.alibaba.middleware.race.table.Table;
 import com.alibaba.middleware.race.table.OffsetLine;
 
 import java.util.StringTokenizer;
@@ -14,11 +14,11 @@ public class OffsetParser implements Runnable {
     private LinkedBlockingQueue<OffsetLine> in;
     private OffsetLine line;
     private IndexCache indexCache;
-    private HashTable table;
+    private Table table;
     private int rowCount;
     private long threadId;
 
-    public OffsetParser(LinkedBlockingQueue<OffsetLine> in, IndexCache indexCache, HashTable table) {
+    public OffsetParser(LinkedBlockingQueue<OffsetLine> in, IndexCache indexCache, Table table) {
         this.in = in;
         this.line = null;
         this.indexCache = indexCache;
@@ -44,7 +44,7 @@ public class OffsetParser implements Runnable {
         Long postfix = Data.getKeyPostfix(rowKey);
         short prefix = Data.getKeyPrefix(rowKey);
         this.indexCache.put(postfix, new IndexEntry(prefix, recordIndex.getFileId(),
-                (int)recordIndex.getAddress()));
+                (int)recordIndex.getAddress(), line.getLen()));
     }
 
     private void nextLine() {

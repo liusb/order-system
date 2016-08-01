@@ -1,15 +1,15 @@
 package com.alibaba.middleware.race.worker;
 
 import com.alibaba.middleware.race.index.*;
-import com.alibaba.middleware.race.table.OrderLine;
+import com.alibaba.middleware.race.table.OffsetLine;
 
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class OrderParser implements Runnable {
-    private LinkedBlockingQueue<OrderLine> in;
-    private OrderLine line;
+    private LinkedBlockingQueue<OffsetLine> in;
+    private OffsetLine line;
     private ArrayList<LinkedBlockingQueue<GoodIdRowIndex>> goodIndexOuts;
     private ArrayList<LinkedBlockingQueue<OrderIdRowIndex>> orderIndexOuts;
     private ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexOuts;
@@ -19,7 +19,7 @@ public class OrderParser implements Runnable {
     private int rowCount;
     private long threadId;
 
-    public OrderParser(LinkedBlockingQueue<OrderLine> inQueue,
+    public OrderParser(LinkedBlockingQueue<OffsetLine> inQueue,
                        ArrayList<LinkedBlockingQueue<GoodIdRowIndex>> goodOIndexQueues,
                        ArrayList<LinkedBlockingQueue<OrderIdRowIndex>> orderIndexQueues,
                        ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexQueues,
@@ -54,6 +54,8 @@ public class OrderParser implements Runnable {
     @Override
     public void run() {
         this.threadId = Thread.currentThread().getId();
+        long maxOrderId = Long.MIN_VALUE, minOrderId = Long.MAX_VALUE;
+        long maxCreateTime = Long.MIN_VALUE, minCreateTime = Long.MAX_VALUE;
         while (true) {
             this.nextLine();
             if(line.getLine().isEmpty()) {
@@ -71,9 +73,21 @@ public class OrderParser implements Runnable {
                 if (key.equals("orderid")) {
                     findCount++;
                     orderId = Long.parseLong(value);
+                    if (orderId > maxOrderId) {
+                        maxOrderId = orderId;
+                    }
+                    if (orderId < minOrderId){
+                        minOrderId = orderId;
+                    }
                 } else if (key.equals("createtime")) {
                     findCount++;
                     createTime = Long.parseLong(value);
+                    if (createTime > maxCreateTime) {
+                        maxCreateTime = createTime;
+                    }
+                    if (createTime < minCreateTime) {
+                        minCreateTime = createTime;
+                    }
                 } else if (key.equals("buyerid")){
                     findCount++;
                     buyerId = value;
@@ -117,6 +131,8 @@ public class OrderParser implements Runnable {
             }
             rowCount ++;
         }
-        System.out.println("INFO: Parser thread completed. rowCount:" + rowCount + " Thread id:" + threadId);
+        System.out.println("INFO: Parser thread completed. rowCount:" + rowCount + " Thread id:" + threadId
+                + " maxOrderId:" + maxOrderId + " minOrderId:" + minOrderId
+                + " maxCreateTime:" + maxCreateTime + " minCreateTime:" + minCreateTime);
     }
 }

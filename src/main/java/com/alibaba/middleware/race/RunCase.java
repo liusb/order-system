@@ -32,7 +32,7 @@ public class RunCase {
         os.construct(orderFiles, buyerFiles, goodFiles, storeFolders);
 
         // 检查构建是否有错误
-        SystemCheck.systemCheck(orderFiles, buyerFiles, goodFiles, os);
+        //SystemCheck.systemCheck(orderFiles, buyerFiles, goodFiles, os);
 
         // 用例
         long beginTime = System.currentTimeMillis();
@@ -57,6 +57,7 @@ public class RunCase {
         String resultStr;
         OrderSystem.KeyValue keyValue;
         Iterator<OrderSystem.Result> resultIterator;
+        long queryByBuyerTime = 0;
         for (int i=0; i<caseFileLimit; i++) {
             LineReader lineReader = new LineReader("./prerun_data/case/case.1."+i);
             System.out.println("正在评测的文件为：case.1." +i);
@@ -78,7 +79,7 @@ public class RunCase {
                         resultStr = result.toString();
                         if (!line.equals(resultStr)) {
                             if (line.length() != resultStr.length() || !compareResult(line, result)) {
-                                throw new RuntimeException("CASE:QUERY_ORDER, orderId:" + orderId
+                                System.out.println("CASE:QUERY_ORDER, orderId:" + orderId
                                         + " " + keysStr + " 结果不一致\n"
                                         + line + "\n not equal result \n" + result);
                             }
@@ -98,14 +99,16 @@ public class RunCase {
                     line = lineReader.nextLine();
                     endTime = Long.parseLong(line.substring(line.indexOf(':') + 1));
                     lineReader.nextLine();
+                    long begin = System.currentTimeMillis();
                     resultIterator = os.queryOrdersByBuyer(startTime, endTime, buyerid);
+                    queryByBuyerTime += (System.currentTimeMillis()-begin);
                     while (resultIterator.hasNext()) {
                         line = lineReader.nextLine();
                         result = resultIterator.next();
                         resultStr = result.toString();
                         if (!line.equals(resultStr)) {
                             if (line.length() != resultStr.length() || !compareResult(line, result)) {
-                                throw new RuntimeException("CASE:QUERY_BUYER_TSRANGE, buyerId:" + buyerid
+                                System.out.println("CASE:QUERY_BUYER_TSRANGE, buyerId:" + buyerid
                                         + " startTime:" + startTime + " endTime:" + endTime + " 结果不一致\n"
                                         + line + "\n not equal \n" + result);
                             }
@@ -132,7 +135,7 @@ public class RunCase {
                         resultStr = result.toString();
                         if (!line.equals(resultStr) &&
                                 (line.length() != resultStr.length() || !compareResult(line, result))) {
-                            throw new RuntimeException("CASE:QUERY_SALER_GOOD, salerid:" + salerid
+                            System.out.println("CASE:QUERY_SALER_GOOD, salerid:" + salerid
                                     + " goodid:" + goodid + " " + keysStr + " 结果不一致\n"
                                     + line + "\n not equal \n" + result);
                         }
@@ -153,13 +156,14 @@ public class RunCase {
                     if ((keyValue != null &&
                             !compareSum(line.substring(line.indexOf(':') + 1), keyValue.valueAsString()))
                             || (keyValue == null && !line.equals("RESULT:null"))) {
-                        throw new RuntimeException(line + "\n not equal \n" + keyValue);
+                        System.out.println(line + "\n not equal \n" + keyValue);
                     }
                     lineReader.nextLine();
                 }
             }
             lineReader.close();
         }
+        System.out.println("queryByBuyerTime: " + queryByBuyerTime);
     }
 
     private static Collection<String> parseKeys(String line) {

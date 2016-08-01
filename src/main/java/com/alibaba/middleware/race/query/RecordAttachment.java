@@ -8,14 +8,14 @@ import java.util.concurrent.CountDownLatch;
 public class RecordAttachment {
 
     public HashMap<String, String> record;
-    public volatile byte[] buffer;
+    public byte[] buffer;
     public CountDownLatch latch;
     public RecordIndex recordIndex;
 
-    public RecordAttachment(CountDownLatch latch, RecordIndex recordIndex) {
+    public RecordAttachment(CountDownLatch latch, RecordIndex recordIndex, int bufferSize) {
         this.latch = latch;
         this.recordIndex = recordIndex;
         this.record = new HashMap<String, String>();
-        this.buffer = new byte[600];
+        this.buffer = new byte[bufferSize];
     }
 }

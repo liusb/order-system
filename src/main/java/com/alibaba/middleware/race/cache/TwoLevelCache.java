@@ -42,9 +42,12 @@ public class TwoLevelCache<K, V> {
         synchronized (secondLevelCache) {
             SoftReference<V> softValue = secondLevelCache.get(key);
             if (softValue != null) {
-                return softValue.get();
-            } else {
-                secondLevelCache.remove(key);
+                V result = softValue.get();
+                if (result != null) {
+                    return result;
+                } else {
+                    secondLevelCache.remove(key);
+                }
             }
         }
         return null;

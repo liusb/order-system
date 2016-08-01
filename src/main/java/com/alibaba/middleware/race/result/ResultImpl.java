@@ -43,7 +43,8 @@ public class ResultImpl implements OrderSystem.Result, Comparable<ResultImpl> {
         if (createTime == -1) {
             return MathUtils.compareLong(o.orderId, this.orderId);
         } else {
-            return MathUtils.compareLong(this.createTime, o.createTime);
+//            return MathUtils.compareLong(this.createTime, o.createTime);
+            return MathUtils.compareLong(o.createTime, this.createTime);
         }
     }
 

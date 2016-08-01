@@ -1,9 +1,11 @@
 package com.alibaba.middleware.race.table;
 
+import com.alibaba.middleware.race.OrderSystem;
 import com.alibaba.middleware.race.cache.TwoLevelCache;
+import com.alibaba.middleware.race.index.HashIndex;
 import com.alibaba.middleware.race.index.RecordIndex;
-import com.alibaba.middleware.race.query.RecordAttachment;
-import com.alibaba.middleware.race.query.RecordHandler;
+import com.alibaba.middleware.race.query.*;
+import com.alibaba.middleware.race.store.Data;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -12,9 +14,9 @@ import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 
 public class OrderTable {
     private static OrderTable instance = new OrderTable();
@@ -25,7 +27,7 @@ public class OrderTable {
 
     private TwoLevelCache<Long, HashMap<String, String>> resultCache;
 
-    public static final int BASE_SIZE = 1024;
+    public static final int BASE_SIZE = 1;
     private static final int GOOD_INDEX_BUCKET_SIZE = 64*BASE_SIZE;
     private static final int ORDER_INDEX_BUCKET_SIZE = 64*BASE_SIZE;
     private static final int BUYER_INDEX_BUCKET_SIZE = 128*BASE_SIZE;
@@ -64,13 +66,10 @@ public class OrderTable {
         buyerIndex.init(storeFolders, BUYER_INDEX_BUCKET_SIZE, BUYER_INDEX_PAGE_SIZE);
 
         orderFilesMap = new HashMap<String, Byte>(43);
+        sortOrderFiles = new String[43];
         for (String file: orderFiles) {
             byte postfix = (byte)Integer.parseInt(file.substring(file.lastIndexOf('.')+1));
             orderFilesMap.put(file, postfix);
-        }
-        sortOrderFiles = new String[43];
-        for (String file: orderFiles) {
-            int postfix = Integer.parseInt(file.substring(file.lastIndexOf('.')+1));
             sortOrderFiles[postfix] = file;
         }
     }
@@ -164,77 +163,14 @@ public class OrderTable {
             }
         }
         try {
-            FindOrderRecord(notCache, results);
+            findOrderRecords(notCache, results);
         } catch (Exception e) {
             e.printStackTrace();
         }
         return results;
     }
 
-    class AioResult {
-        Future<Integer> future;
-        byte[] buffer;
-        RecordIndex index;
-        AioResult(Future<Integer> future, byte[] buffer, RecordIndex index) {
-            this.future = future;
-            this.buffer = buffer;
-            this.index = index;
-        }
-    }
-
-    private void aioFindOrderRecord(ArrayList<RecordIndex> recordIndexes, ArrayList<HashMap<String, String>> results)
-            throws IOException, ExecutionException, InterruptedException {
-        ArrayList<AioResult> aioResults = new ArrayList<AioResult>(recordIndexes.size());
-        Collections.sort(recordIndexes);
-        AsynchronousFileChannel[] channels = new AsynchronousFileChannel[43];
-        byte fileId;
-        for (RecordIndex recordIndex:recordIndexes) {
-            fileId = recordIndex.getFileId();
-            if (channels[fileId] == null) {
-                channels[fileId] = AsynchronousFileChannel.open(Paths.get(this.sortOrderFiles[fileId]),
-                        StandardOpenOption.READ);
-            }
-            byte[] buffer = new byte[600];
-            aioResults.add(new AioResult(channels[fileId].read(ByteBuffer.wrap(buffer), recordIndex.getAddress()),
-                    buffer, recordIndex));
-        }
-        while (!aioResults.isEmpty()) {
-            Iterator<AioResult> iterator = aioResults.iterator();
-            while (iterator.hasNext()) {
-                AioResult aioResult = iterator.next();
-                if (aioResult.future.isDone()) {
-                    int readLen = aioResult.future.get();
-                    HashMap<String, String> result = new HashMap<String, String>();
-                    byte[] buffer = aioResult.buffer;
-                    int begin = 0;
-                    String key = "";
-                    for (int i = 0; i < readLen; i++) {
-                        if (buffer[i] == '\n') {
-                            result.put(key, new String(buffer, begin, i - begin));
-                            break;
-                        }
-                        if (buffer[i] == ':') {
-                            key = new String(buffer, begin, i - begin);
-                            begin = i + 1;
-                        } else if (buffer[i] == '\t') {
-                            result.put(key, new String(buffer, begin, i - begin));
-                            begin = i + 1;
-                        }
-                    }
-                    results.add(result);
-                    resultCache.put((aioResult.index.getAddress()<<6)|aioResult.index.getFileId(), result);
-                    iterator.remove();
-                }
-            }
-        }
-        for (AsynchronousFileChannel channel: channels) {
-            if (channel != null) {
-                channel.close();
-            }
-        }
-    }
-
-    private void FindOrderRecord(ArrayList<RecordIndex> recordIndexes, ArrayList<HashMap<String, String>> results)
+    private void findOrderRecords(ArrayList<RecordIndex> recordIndexes, ArrayList<HashMap<String, String>> results)
             throws IOException, ExecutionException, InterruptedException {
         CountDownLatch latch = new CountDownLatch(recordIndexes.size());
         ArrayList<RecordAttachment> attachments = new ArrayList<RecordAttachment>(recordIndexes.size());
@@ -247,7 +183,7 @@ public class OrderTable {
                 this.fileChannels[fileId] = AsynchronousFileChannel.open(Paths.get(this.sortOrderFiles[fileId]),
                         StandardOpenOption.READ);
             }
-            RecordAttachment attachment = new RecordAttachment(latch, recordIndex);
+            RecordAttachment attachment = new RecordAttachment(latch, recordIndex, 600);
             attachments.add(attachment);
             this.fileChannels[fileId].read(ByteBuffer.wrap(attachment.buffer), recordIndex.getAddress(),
                     attachment, recordHandler);
@@ -258,5 +194,36 @@ public class OrderTable {
             resultCache.put((attachment.recordIndex.getAddress() << 6) | attachment.recordIndex.getFileId(),
                     attachment.record);
         }
+    }
+
+    public ConcurrentSkipListSet<OrderSystem.Result> findByBuyer(String buyerId, long startTime, long endTime) {
+        ConcurrentSkipListSet<OrderSystem.Result> results = new ConcurrentSkipListSet<OrderSystem.Result>();
+        try {
+            CountDownLatch waitForBuyer;
+            HashMap<String, String> buyerRecord = BuyerTable.getInstance().getFormCache(buyerId);
+            if (buyerRecord == null) {
+                waitForBuyer = new CountDownLatch(1);
+                // 查找buyerRecord
+                buyerRecord = new HashMap<String, String>();
+                BuyerTable.getInstance().findBuyer(buyerId, waitForBuyer, buyerRecord);
+            } else {
+                waitForBuyer = new CountDownLatch(0);
+            }
+            CountDownLatch waitForResult = new CountDownLatch(1);
+            BuyerCondition condition = new BuyerCondition(Data.getKeyPrefix(buyerId),
+                    Data.getKeyPostfix(buyerId), startTime, endTime);
+            int fileId = OrderTable.getInstance().buyerIndex.getIndex().getFileIndex(HashIndex.getHashCode(buyerId));
+            int pageId = OrderTable.getInstance().buyerIndex.getIndex().getBucketId(HashIndex.getHashCode(buyerId));
+            AsynchronousFileChannel fileChannel = buyerIndex.getFileChannel(fileId);
+            BuyerAttachment attachment = new BuyerAttachment(condition, fileChannel, BUYER_INDEX_PAGE_SIZE,
+                    waitForBuyer, buyerRecord, waitForResult, results);
+            BuyerHandler buyerHandler = new BuyerHandler();
+            fileChannel.read(ByteBuffer.wrap(attachment.buffer), pageId * BUYER_INDEX_PAGE_SIZE, attachment, buyerHandler);
+            // 等待结果
+            waitForResult.await();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return results;
     }
 }

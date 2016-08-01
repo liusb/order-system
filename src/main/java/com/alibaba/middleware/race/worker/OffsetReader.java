@@ -49,7 +49,7 @@ public class OffsetReader implements Runnable {
                         if (bArray[bArrayOffset]=='\n') {
                             lineLength = bArrayOffset-lineBegin;
                             OffsetLine orderLine = new OffsetLine(new RecordIndex(fileId, nextLineOffset),
-                                    new String(bArray, lineBegin, lineLength));
+                                    new String(bArray, lineBegin, lineLength), lineLength+1);
                             if (maxLineSize < lineLength) {
                                 maxLineSize = lineLength;
                             }
@@ -79,9 +79,10 @@ public class OffsetReader implements Runnable {
                     lineBegin = 0;
                     warpedBuffer = ByteBuffer.wrap(bArray, bArrayOffset, B_SIZE);
                 }
+                System.out.println("INFO: reade file " + entry.getKey() + " completed. max offset:" + nextLineOffset);
                 fileChannel.close();
             }
-            System.out.println("INFO: Order Reader thread completed. lineCount:"
+            System.out.println("INFO: Reader thread completed. lineCount:"
                     + lineCount + " max line size: " + maxLineSize + " Thread id:" + threadId);
         } catch (IOException e) {
             e.printStackTrace();

@@ -17,10 +17,11 @@ public class IndexCache {
         } else {
             entry.next = indexEntry.next;
             indexEntry.next = entry;
+            System.out.println("WARN: Key 冲突:" + key);
         }
     }
 
-    public synchronized IndexEntry get(Long key, short prefix) {
+    public IndexEntry get(Long key, short prefix) {
         IndexEntry entry = cache.get(key);
         while (entry != null) {
             if (entry.prefix == prefix) {
