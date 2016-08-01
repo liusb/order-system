@@ -269,10 +269,10 @@ public class WorkerManager implements Runnable {
     private static ArrayList<OffsetReader> createOffsetReaders(String[] sortedFiles, int size,
                                                          ArrayList<LinkedBlockingQueue<OffsetLine>> inQueues,
                                                          int readThreadNum) {
-        ArrayList<HashMap<String, Byte>> fileSplits = new ArrayList<HashMap<String, Byte>>(readThreadNum);
         if (readThreadNum < size) {
             readThreadNum = size;
         }
+        ArrayList<HashMap<String, Byte>> fileSplits = new ArrayList<HashMap<String, Byte>>(readThreadNum);
         for (int i=0; i<readThreadNum; i++) {
             fileSplits.add(new HashMap<String, Byte>());
         }

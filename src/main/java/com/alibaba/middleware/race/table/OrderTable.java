@@ -27,7 +27,7 @@ public class OrderTable {
 
     private TwoLevelCache<Long, HashMap<String, String>> resultCache;
 
-    public static final int BASE_SIZE = 1;
+    public static final int BASE_SIZE = 1024;
     private static final int GOOD_INDEX_BUCKET_SIZE = 64*BASE_SIZE;
     private static final int ORDER_INDEX_BUCKET_SIZE = 64*BASE_SIZE;
     private static final int BUYER_INDEX_BUCKET_SIZE = 128*BASE_SIZE;

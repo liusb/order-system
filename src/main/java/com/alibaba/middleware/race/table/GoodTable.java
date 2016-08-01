@@ -28,8 +28,8 @@ public class GoodTable {
 
     private TwoLevelCache<String, HashMap<String, String>> resultCache;
 
-    private static final int FIRST_LEVEL_CACHE_SIZE = 3*256*OrderTable.BASE_SIZE;  //0.904k/record
-    private static final int SECOND_LEVEL_CACHE_SIZE = 256*OrderTable.BASE_SIZE;
+    private static final int FIRST_LEVEL_CACHE_SIZE = 2*256*OrderTable.BASE_SIZE;  //0.904k/record
+    private static final int SECOND_LEVEL_CACHE_SIZE = 2*256*OrderTable.BASE_SIZE;
     
     private static final String[] TABLE_COLUMNS = {"goodid"};
     public Table baseTable;
