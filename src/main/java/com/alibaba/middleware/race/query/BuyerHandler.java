@@ -10,11 +10,9 @@ import com.alibaba.middleware.race.table.GoodTable;
 import com.alibaba.middleware.race.table.HashTable;
 import com.alibaba.middleware.race.table.OrderTable;
 
-import java.nio.ByteBuffer;
 import java.nio.channels.CompletionHandler;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.concurrent.CountDownLatch;
 
 public class BuyerHandler implements CompletionHandler<Integer, BuyerAttachment> {
 
@@ -23,17 +21,6 @@ public class BuyerHandler implements CompletionHandler<Integer, BuyerAttachment>
         byte[] buffer = attachment.buffer;
         DataPage page = new DataPage(new Data(buffer), DataPage.HeaderLength);
         page.parseHeader();
-        CountDownLatch waitNexPage;
-        if (page.getNextPage() != -1) {
-            waitNexPage = new CountDownLatch(1);
-            BuyerAttachment forNextPage = new BuyerAttachment(attachment.condition, attachment.fileChannel,
-                    buffer.length, attachment.waitBuyerLatch, attachment.buyerRecord,
-                    waitNexPage, attachment.resultsSet);
-            attachment.fileChannel.read(ByteBuffer.wrap(forNextPage.buffer),
-                    ((long)page.getNextPage())*buffer.length, forNextPage, this);
-        } else {
-            waitNexPage = new CountDownLatch(0);
-        }
         ArrayList<RecordIndex> indexes = HashTable.findIndex(page, attachment.condition);
         ArrayList<HashMap<String, String>> orderRecords = OrderTable.getInstance().findOrders(indexes);
         HashMap<String, HashMap<String, String>> goodRecords = GoodTable.getInstance().findGoodOfOrder(orderRecords);
@@ -54,16 +41,7 @@ public class BuyerHandler implements CompletionHandler<Integer, BuyerAttachment>
             createTime = Long.parseLong(orderRecord.get("createtime"));
             attachment.resultsSet.add(new ResultImpl(orderId, result, createTime));
         }
-
-        while (true) {
-            try {
-                waitNexPage.await();
-                break;
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-        attachment.waitForResultLatch.countDown();
+        attachment.waitForResult.countDown();
     }
 
     @Override

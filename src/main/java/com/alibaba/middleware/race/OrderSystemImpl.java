@@ -215,14 +215,7 @@ public class OrderSystemImpl implements OrderSystem {
 //        }
 //        return new ResultIterator(results);
 
-        while (!OrderTable.getInstance().isPrepared()) {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-        return new SkipListIterator(OrderTable.getInstance().findByBuyer(buyerId, startTime, endTime));
+        return new ResultIterator(OrderTable.getInstance().findByBuyer(buyerId, startTime, endTime));
 
     }
 

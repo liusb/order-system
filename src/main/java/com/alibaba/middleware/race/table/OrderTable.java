@@ -1,11 +1,13 @@
 package com.alibaba.middleware.race.table;
 
-import com.alibaba.middleware.race.OrderSystem;
+import com.alibaba.middleware.race.cache.ThreadPool;
 import com.alibaba.middleware.race.cache.TwoLevelCache;
 import com.alibaba.middleware.race.index.HashIndex;
 import com.alibaba.middleware.race.index.RecordIndex;
 import com.alibaba.middleware.race.query.*;
+import com.alibaba.middleware.race.result.ResultImpl;
 import com.alibaba.middleware.race.store.Data;
+import com.alibaba.middleware.race.store.DataPage;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -14,7 +16,6 @@ import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
@@ -31,8 +32,8 @@ public class OrderTable {
     private static final int GOOD_INDEX_BUCKET_SIZE = 64*BASE_SIZE;
     private static final int ORDER_INDEX_BUCKET_SIZE = 64*BASE_SIZE;
     private static final int BUYER_INDEX_BUCKET_SIZE = 128*BASE_SIZE;
-    private static final int FIRST_LEVEL_CACHE_SIZE = 7*1024*BASE_SIZE;  // 0.21676k/record
-    private static final int SECOND_LEVEL_CACHE_SIZE = 2*1024*BASE_SIZE;
+    private static final int FIRST_LEVEL_CACHE_SIZE = 4*1024*BASE_SIZE;  // 0.21676k/record
+    private static final int SECOND_LEVEL_CACHE_SIZE = 4*1024*BASE_SIZE;
 
     // 每页的大小，单位为byte
     private static final int GOOD_TABLE_PAGE_SIZE = 4*(1<<10);
@@ -65,8 +66,8 @@ public class OrderTable {
         buyerIndex.setBaseColumns(INDEX_COLUMNS);
         buyerIndex.init(storeFolders, BUYER_INDEX_BUCKET_SIZE, BUYER_INDEX_PAGE_SIZE);
 
-        orderFilesMap = new HashMap<String, Byte>(43);
-        sortOrderFiles = new String[43];
+        orderFilesMap = new HashMap<String, Byte>(orderFiles.size());
+        sortOrderFiles = new String[orderFiles.size()];
         for (String file: orderFiles) {
             byte postfix = (byte)Integer.parseInt(file.substring(file.lastIndexOf('.')+1));
             orderFilesMap.put(file, postfix);
@@ -87,6 +88,16 @@ public class OrderTable {
         this.prepared = true;
         resultCache = new TwoLevelCache<Long, HashMap<String, String>>(FIRST_LEVEL_CACHE_SIZE, SECOND_LEVEL_CACHE_SIZE);
         this.fileChannels = new AsynchronousFileChannel[this.sortOrderFiles.length];
+        try {
+            HashSet<StandardOpenOption>openOptions = new HashSet<StandardOpenOption>(
+                    Collections.singleton(StandardOpenOption.READ));
+            for (int i = 0; i < sortOrderFiles.length; i++) {
+                this.fileChannels[i] = AsynchronousFileChannel.open(Paths.get(this.sortOrderFiles[i]),
+                        openOptions, ThreadPool.getInstance().pool);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public RecordIndex findOderIdIndex(long orderId) {
@@ -172,10 +183,6 @@ public class OrderTable {
         RecordHandler recordHandler = new RecordHandler();
         for (RecordIndex recordIndex:recordIndexes) {
             fileId = recordIndex.getFileId();
-            if (this.fileChannels[fileId] == null) {
-                this.fileChannels[fileId] = AsynchronousFileChannel.open(Paths.get(this.sortOrderFiles[fileId]),
-                        StandardOpenOption.READ);
-            }
             RecordAttachment attachment = new RecordAttachment(latch, recordIndex, 600);
             attachments.add(attachment);
             this.fileChannels[fileId].read(ByteBuffer.wrap(attachment.buffer), recordIndex.getAddress(),
@@ -189,34 +196,44 @@ public class OrderTable {
         }
     }
 
-    public ConcurrentSkipListSet<OrderSystem.Result> findByBuyer(String buyerId, long startTime, long endTime) {
-        ConcurrentSkipListSet<OrderSystem.Result> results = new ConcurrentSkipListSet<OrderSystem.Result>();
-        try {
-            CountDownLatch waitForBuyer;
-            HashMap<String, String> buyerRecord = BuyerTable.getInstance().findFormCache(buyerId);
-            if (buyerRecord == null) {
-                waitForBuyer = new CountDownLatch(1);
-                // 查找buyerRecord
-                buyerRecord = new HashMap<String, String>();
-                BuyerTable.getInstance().findBuyer(buyerId, waitForBuyer, buyerRecord);
-            } else {
-                waitForBuyer = new CountDownLatch(0);
-            }
-            CountDownLatch waitForResult = new CountDownLatch(1);
-            BuyerCondition condition = new BuyerCondition(Data.getKeyPrefix(buyerId),
-                    Data.getKeyPostfix(buyerId), startTime, endTime);
-            int fileId = OrderTable.getInstance().buyerIndex.getIndex().getFileIndex(HashIndex.getHashCode(buyerId));
-            int pageId = OrderTable.getInstance().buyerIndex.getIndex().getBucketId(HashIndex.getHashCode(buyerId));
-            AsynchronousFileChannel fileChannel = buyerIndex.getFileChannel(fileId);
-            BuyerAttachment attachment = new BuyerAttachment(condition, fileChannel, BUYER_INDEX_PAGE_SIZE,
-                    waitForBuyer, buyerRecord, waitForResult, results);
-            BuyerHandler buyerHandler = new BuyerHandler();
-            fileChannel.read(ByteBuffer.wrap(attachment.buffer), pageId * BUYER_INDEX_PAGE_SIZE, attachment, buyerHandler);
-            // 等待结果
-            waitForResult.await();
-        } catch (Exception e) {
-            e.printStackTrace();
+    public ArrayList<ResultImpl> findByBuyer(String buyerId, long startTime, long endTime) {
+        ArrayList<ResultImpl> results = new ArrayList<ResultImpl>();
+        CountDownLatch waitForBuyer;
+        HashMap<String, String> buyerRecord = BuyerTable.getInstance().findFormCache(buyerId);
+        if (buyerRecord == null) {
+            waitForBuyer = new CountDownLatch(1);
+            // 查找buyerRecord
+            buyerRecord = new HashMap<String, String>();
+            BuyerTable.getInstance().findBuyer(buyerId, waitForBuyer, buyerRecord);
+        } else {
+            waitForBuyer = new CountDownLatch(0);
         }
+        CountDownLatch waitForResult = new CountDownLatch(1);
+        BuyerCondition condition = new BuyerCondition(Data.getKeyPrefix(buyerId),
+                Data.getKeyPostfix(buyerId), startTime, endTime);
+        int fileId = OrderTable.getInstance().buyerIndex.getIndex().getFileIndex(HashIndex.getHashCode(buyerId));
+        int pageId = OrderTable.getInstance().buyerIndex.getIndex().getBucketId(HashIndex.getHashCode(buyerId));
+        AsynchronousFileChannel fileChannel = buyerIndex.getFileChannel(fileId);
+        byte[] buffer = new byte[BUYER_INDEX_PAGE_SIZE];
+        Data data = new Data(buffer, DataPage.NextPos);
+        BuyerAttachment attachment = new BuyerAttachment(condition, buffer, waitForBuyer, buyerRecord, waitForResult, results);
+        BuyerHandler buyerHandler = new BuyerHandler();
+        while (pageId != -1) {
+            fileChannel.read(ByteBuffer.wrap(attachment.buffer), ((long)pageId*BUYER_INDEX_PAGE_SIZE), attachment, buyerHandler);
+            // 等待结果
+            while (true) {
+                try {
+                    attachment.waitForResult.await();
+                    break;
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            attachment.waitForResult = new CountDownLatch(1);
+            data.setPos(DataPage.NextPos);
+            pageId = data.readInt();
+        }
+
         return results;
     }
 }

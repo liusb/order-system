@@ -1,5 +1,6 @@
 package com.alibaba.middleware.race.table;
 
+import com.alibaba.middleware.race.cache.ThreadPool;
 import com.alibaba.middleware.race.index.HashIndex;
 import com.alibaba.middleware.race.index.RecordIndex;
 import com.alibaba.middleware.race.query.BuyerCondition;
@@ -13,6 +14,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 
 
 public class HashTable extends Table {
@@ -45,13 +48,20 @@ public class HashTable extends Table {
             pageStore.open("r");
         }
         fileChannels = new AsynchronousFileChannel[storeFilesName.length];
+        try {
+            HashSet<StandardOpenOption> openOptions = new HashSet<StandardOpenOption>(
+                    Collections.singleton(StandardOpenOption.READ));
+            for (int i = 0; i < storeFilesName.length; i++) {
+                this.fileChannels[i] = AsynchronousFileChannel.open(Paths.get(this.storeFilesName[i]),
+                        openOptions, ThreadPool.getInstance().pool);
+
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    public AsynchronousFileChannel getFileChannel(int fileId) throws IOException {
-        if (fileChannels[fileId] == null) {
-            fileChannels[fileId] = AsynchronousFileChannel.open(Paths.get(this.storeFilesName[fileId]),
-                    StandardOpenOption.READ);
-        }
+    public AsynchronousFileChannel getFileChannel(int fileId) {
         return fileChannels[fileId];
     }
 

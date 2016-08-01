@@ -79,7 +79,7 @@ public class RunCase {
                         resultStr = result.toString();
                         if (!line.equals(resultStr)) {
                             if (line.length() != resultStr.length() || !compareResult(line, result)) {
-                                System.out.println("CASE:QUERY_ORDER, orderId:" + orderId
+                                System.out.println("=======>CASE:QUERY_ORDER, orderId:" + orderId
                                         + " " + keysStr + " 结果不一致\n"
                                         + line + "\n not equal result \n" + result);
                             }
@@ -87,7 +87,7 @@ public class RunCase {
                     }
                     line = lineReader.nextLine();
                     if (result == null && !line.equals("}")) {
-                        throw new RuntimeException("CASE:QUERY_ORDER, orderId:" + orderId
+                        throw new RuntimeException("=======>CASE:QUERY_ORDER, orderId:" + orderId
                                 + " " + keysStr + " 程序查询返回null，实际则是：\n" + line);
                     }
                     lineReader.nextLine();
@@ -108,7 +108,7 @@ public class RunCase {
                         resultStr = result.toString();
                         if (!line.equals(resultStr)) {
                             if (line.length() != resultStr.length() || !compareResult(line, result)) {
-                                System.out.println("CASE:QUERY_BUYER_TSRANGE, buyerId:" + buyerid
+                                System.out.println("=======>CASE:QUERY_BUYER_TSRANGE, buyerId:" + buyerid
                                         + " startTime:" + startTime + " endTime:" + endTime + " 结果不一致\n"
                                         + line + "\n not equal \n" + result);
                             }
@@ -116,7 +116,7 @@ public class RunCase {
                     }
                     line = lineReader.nextLine();
                     if (!line.equals("}")) {
-                        throw new RuntimeException("CASE:QUERY_BUYER_TSRANGE, buyerId:" + buyerid
+                        throw new RuntimeException("=======>CASE:QUERY_BUYER_TSRANGE, buyerId:" + buyerid
                                 + " startTime:" + startTime + " endTime:" + endTime + "结果长度不一致");
                     }
                     lineReader.nextLine();
@@ -135,14 +135,14 @@ public class RunCase {
                         resultStr = result.toString();
                         if (!line.equals(resultStr) &&
                                 (line.length() != resultStr.length() || !compareResult(line, result))) {
-                            System.out.println("CASE:QUERY_SALER_GOOD, salerid:" + salerid
+                            System.out.println("=======>CASE:QUERY_SALER_GOOD, salerid:" + salerid
                                     + " goodid:" + goodid + " " + keysStr + " 结果不一致\n"
                                     + line + "\n not equal \n" + result);
                         }
                     }
                     line = lineReader.nextLine();
                     if (!line.equals("}")) {
-                        throw new RuntimeException("CASE:QUERY_BUYER_TSRANGE, salerid:" + salerid
+                        throw new RuntimeException("=======>CASE:QUERY_BUYER_TSRANGE, salerid:" + salerid
                                 + " goodid:" + goodid + " " + keysStr + "结果长度不一致");
                     }
                     lineReader.nextLine();
@@ -156,7 +156,7 @@ public class RunCase {
                     if ((keyValue != null &&
                             !compareSum(line.substring(line.indexOf(':') + 1), keyValue.valueAsString()))
                             || (keyValue == null && !line.equals("RESULT:null"))) {
-                        System.out.println(line + "\n not equal \n" + keyValue);
+                        System.out.println("=======>CASE:QUERY_GOOD_SUM" + line + "\n not equal \n" + keyValue);
                     }
                     lineReader.nextLine();
                 }

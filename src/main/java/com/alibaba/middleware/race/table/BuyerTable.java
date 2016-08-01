@@ -2,6 +2,7 @@ package com.alibaba.middleware.race.table;
 
 import com.alibaba.middleware.race.cache.IndexCache;
 import com.alibaba.middleware.race.cache.IndexEntry;
+import com.alibaba.middleware.race.cache.ThreadPool;
 import com.alibaba.middleware.race.cache.TwoLevelCache;
 import com.alibaba.middleware.race.query.IndexAttachment;
 import com.alibaba.middleware.race.query.IndexHandler;
@@ -26,8 +27,8 @@ public class BuyerTable {
 
     private TwoLevelCache<String, HashMap<String, String>> resultCache;
 
-    private static final int FIRST_LEVEL_CACHE_SIZE = 3*1024*OrderTable.BASE_SIZE;  // 0.251125k/record
-    private static final int SECOND_LEVEL_CACHE_SIZE = 1024*OrderTable.BASE_SIZE;
+    private static final int FIRST_LEVEL_CACHE_SIZE = 1024*OrderTable.BASE_SIZE;  // 0.251125k/record
+    private static final int SECOND_LEVEL_CACHE_SIZE = 2*1024*OrderTable.BASE_SIZE;
 
     private static final String[] TABLE_COLUMNS = {"buyerid"};
     public Table baseTable;
@@ -56,6 +57,16 @@ public class BuyerTable {
     public void reopen() {
         resultCache = new TwoLevelCache<String, HashMap<String, String>>(FIRST_LEVEL_CACHE_SIZE, SECOND_LEVEL_CACHE_SIZE);
         this.fileChannels = new AsynchronousFileChannel[this.sortBuyerFiles.length];
+        try {
+            HashSet<StandardOpenOption>openOptions = new HashSet<StandardOpenOption>(
+                    Collections.singleton(StandardOpenOption.READ));
+            for (int i = 0; i < sortBuyerFiles.length; i++) {
+                this.fileChannels[i] = AsynchronousFileChannel.open(Paths.get(this.sortBuyerFiles[i]),
+                        openOptions, ThreadPool.getInstance().pool);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     // 先从缓存取，取不到再从文件取
@@ -122,14 +133,6 @@ public class BuyerTable {
             return;
         }
         byte fileId = index.getFileId();
-        if (this.fileChannels[fileId] == null) {
-            try {
-                this.fileChannels[fileId] = AsynchronousFileChannel.open(Paths.get(this.sortBuyerFiles[fileId]),
-                        StandardOpenOption.READ);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
         IndexAttachment attachment = new IndexAttachment(waitForBuyer, buyerRecord, index);
         this.fileChannels[fileId].read(ByteBuffer.wrap(attachment.buffer), index.getAddress(),
                     attachment, indexHandler);

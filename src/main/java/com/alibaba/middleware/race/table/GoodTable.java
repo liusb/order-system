@@ -3,6 +3,7 @@ package com.alibaba.middleware.race.table;
 
 import com.alibaba.middleware.race.cache.IndexCache;
 import com.alibaba.middleware.race.cache.IndexEntry;
+import com.alibaba.middleware.race.cache.ThreadPool;
 import com.alibaba.middleware.race.cache.TwoLevelCache;
 import com.alibaba.middleware.race.query.IndexAttachment;
 import com.alibaba.middleware.race.query.IndexHandler;
@@ -27,7 +28,7 @@ public class GoodTable {
 
     private TwoLevelCache<String, HashMap<String, String>> resultCache;
 
-    private static final int FIRST_LEVEL_CACHE_SIZE = 2*256*OrderTable.BASE_SIZE;  //0.904k/record
+    private static final int FIRST_LEVEL_CACHE_SIZE = 128*OrderTable.BASE_SIZE;  //0.904k/record
     private static final int SECOND_LEVEL_CACHE_SIZE = 2*256*OrderTable.BASE_SIZE;
     
     private static final String[] TABLE_COLUMNS = {"goodid"};
@@ -56,6 +57,17 @@ public class GoodTable {
     public void reopen() {
         resultCache = new TwoLevelCache<String, HashMap<String, String>>(FIRST_LEVEL_CACHE_SIZE, SECOND_LEVEL_CACHE_SIZE);
         this.fileChannels = new AsynchronousFileChannel[this.sortGoodFiles.length];
+        try {
+            HashSet<StandardOpenOption>openOptions = new HashSet<StandardOpenOption>(
+                    Collections.singleton(StandardOpenOption.READ));
+            for (int i = 0; i < sortGoodFiles.length; i++) {
+                this.fileChannels[i] = AsynchronousFileChannel.open(Paths.get(this.sortGoodFiles[i]),
+                        openOptions, ThreadPool.getInstance().pool);
+
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public HashMap<String, String> find(String goodId) {
@@ -119,14 +131,6 @@ public class GoodTable {
             return;
         }
         byte fileId = index.getFileId();
-        if (this.fileChannels[fileId] == null) {
-            try {
-                this.fileChannels[fileId] = AsynchronousFileChannel.open(Paths.get(this.sortGoodFiles[fileId]),
-                        StandardOpenOption.READ);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
         IndexAttachment attachment = new IndexAttachment(waitForGood, goodRecord, index);
         this.fileChannels[fileId].read(ByteBuffer.wrap(attachment.buffer), index.getAddress(),
                 attachment, indexHandler);
@@ -166,10 +170,6 @@ public class GoodTable {
         byte fileId;
         for (IndexEntry index:indexes) {
             fileId = index.getFileId();
-            if (this.fileChannels[fileId] == null) {
-                this.fileChannels[fileId] = AsynchronousFileChannel.open(Paths.get(this.sortGoodFiles[fileId]),
-                        StandardOpenOption.READ);
-            }
             IndexAttachment attachment = new IndexAttachment(latch, index);
             attachments.add(attachment);
             this.fileChannels[fileId].read(ByteBuffer.wrap(attachment.buffer), index.getAddress(),
