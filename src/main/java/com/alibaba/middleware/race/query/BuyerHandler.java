@@ -30,7 +30,7 @@ public class BuyerHandler implements CompletionHandler<Integer, BuyerAttachment>
                     buffer.length, attachment.waitBuyerLatch, attachment.buyerRecord,
                     waitNexPage, attachment.resultsSet);
             attachment.fileChannel.read(ByteBuffer.wrap(forNextPage.buffer),
-                    page.getNextPage()*buffer.length, forNextPage, this);
+                    (long)page.getNextPage()*buffer.length, forNextPage, this);
         } else {
             waitNexPage = new CountDownLatch(0);
         }
