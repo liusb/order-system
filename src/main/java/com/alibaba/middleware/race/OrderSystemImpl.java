@@ -1,19 +1,15 @@
 package com.alibaba.middleware.race;
 
-import com.alibaba.middleware.race.index.HashIndex;
 import com.alibaba.middleware.race.index.RecordIndex;
-import com.alibaba.middleware.race.query.BuyerCondition;
 import com.alibaba.middleware.race.result.KVImpl;
 import com.alibaba.middleware.race.result.ResultImpl;
 import com.alibaba.middleware.race.result.ResultIterator;
-import com.alibaba.middleware.race.result.SkipListIteroator;
-import com.alibaba.middleware.race.store.Data;
+import com.alibaba.middleware.race.result.SkipListIterator;
 import com.alibaba.middleware.race.table.*;
 import com.alibaba.middleware.race.worker.WorkerManager;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -122,11 +118,39 @@ public class OrderSystemImpl implements OrderSystem {
         HashMap<String, String> goodRecord = null;
         HashMap<String, String> buyerRecord = null;
         HashMap<String, String> orderRecord = OrderTable.getInstance().findOrder(orderIdRowIndex);
+        CountDownLatch waitForGood = null;
+        CountDownLatch waitForBuyer = null;
         if (goodTableKeys == null || goodTableKeys.size() > 0) {
-            goodRecord = GoodTable.getInstance().find(orderRecord.get("goodid"));
+            String goodId = orderRecord.get("goodid");
+            goodRecord = GoodTable.getInstance().findFromCache(goodId);
+            if (goodRecord == null) {
+                goodRecord = new HashMap<String, String>();
+                waitForGood = new CountDownLatch(1);
+                GoodTable.getInstance().findGood(goodId, waitForGood, goodRecord);
+            }
         }
         if (buyerTableKeys == null || buyerTableKeys.size() > 0) {
-            buyerRecord = BuyerTable.getInstance().find(orderRecord.get("buyerid"));
+            String buyerId = orderRecord.get("buyerid");
+            buyerRecord = BuyerTable.getInstance().findFormCache(buyerId);
+            if (buyerRecord == null) {
+                buyerRecord = new HashMap<String, String>();
+                waitForBuyer = new CountDownLatch(1);
+                BuyerTable.getInstance().findBuyer(buyerId, waitForBuyer, buyerRecord);
+            }
+        }
+        if (waitForBuyer != null) {
+            try {
+                waitForBuyer.await();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        if (waitForGood != null) {
+            try {
+                waitForGood.await();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
         HashMap<String, KVImpl> result;
         if (keys == null) {
@@ -198,7 +222,7 @@ public class OrderSystemImpl implements OrderSystem {
                 e.printStackTrace();
             }
         }
-        return new SkipListIteroator(OrderTable.getInstance().findByBuyer(buyerId, startTime, endTime));
+        return new SkipListIterator(OrderTable.getInstance().findByBuyer(buyerId, startTime, endTime));
 
     }
 
@@ -255,17 +279,37 @@ public class OrderSystemImpl implements OrderSystem {
             buyerTableKeys.clear();
         }
 
-        ArrayList<ResultImpl> results = new ArrayList<ResultImpl>();
-        HashMap<String, KVImpl> result;
+        ArrayList<HashMap<String, String>>  orderRecords = OrderTable.getInstance().findOrders(goodRowIndex);
+
         HashMap<String, String> goodRecord = null;
-        HashMap<String, String> buyerRecord = null;
+        CountDownLatch waitForGood = null;
         if (goodTableKeys == null || goodTableKeys.size() > 0) {
-            goodRecord = GoodTable.getInstance().find(goodId);
+            goodRecord = GoodTable.getInstance().findFromCache(goodId);
+            if (goodRecord == null) {
+                goodRecord = new HashMap<String, String>();
+                waitForGood = new CountDownLatch(1);
+                GoodTable.getInstance().findGood(goodId, waitForGood, goodRecord);
+            }
         }
 
-        ArrayList<HashMap<String, String>>  orderRecords = OrderTable.getInstance().findOrders(goodRowIndex);
+        HashMap<String, HashMap<String, String>> buyerRecords = null;
+        if (buyerTableKeys == null || buyerTableKeys.size() > 0) {
+            buyerRecords = BuyerTable.getInstance().findBuyerOfOrder(orderRecords);
+        }
+
+        if (waitForGood != null) {
+            try {
+                waitForGood.await();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        ArrayList<ResultImpl> results = new ArrayList<ResultImpl>();
+        HashMap<String, KVImpl> result;
+        HashMap<String, String> buyerRecord = null;
         for (HashMap<String, String> orderRecord : orderRecords) {
-            if (buyerTableKeys == null || buyerTableKeys.size() > 0) {
+            if (buyerRecords != null) {
                 buyerRecord = BuyerTable.getInstance().find(orderRecord.get("buyerid"));
             }
             if (keys == null) {
@@ -344,12 +388,16 @@ public class OrderSystemImpl implements OrderSystem {
         boolean hasDouble = false;
         boolean keyInBuyerTable = BuyerTable.getInstance().baseTable.containColumn(key);
         ArrayList<HashMap<String, String>>  orderRecords = OrderTable.getInstance().findOrders(goodRowIndex);
+        HashMap<String, HashMap<String, String>> buyerRecords = null;
+        if (keyInBuyerTable) {
+            buyerRecords = BuyerTable.getInstance().findBuyerOfOrder(orderRecords);
+        }
         for (HashMap<String, String> order : orderRecords) {
             Object value;
             if (!keyInBuyerTable) {
                 value = order.get(key);
             } else {
-                HashMap<String, String> buyerRecord = BuyerTable.getInstance().find(order.get("buyerid"));
+                HashMap<String, String> buyerRecord = buyerRecords.get(order.get("buyerid"));
                 value = buyerRecord.get(key);
             }
             if (value != null) {

@@ -27,7 +27,7 @@ public class OrderTable {
 
     private TwoLevelCache<Long, HashMap<String, String>> resultCache;
 
-    public static final int BASE_SIZE = 1024;
+    public static final int BASE_SIZE = 1;
     private static final int GOOD_INDEX_BUCKET_SIZE = 64*BASE_SIZE;
     private static final int ORDER_INDEX_BUCKET_SIZE = 64*BASE_SIZE;
     private static final int BUYER_INDEX_BUCKET_SIZE = 128*BASE_SIZE;
@@ -97,10 +97,6 @@ public class OrderTable {
         return this.goodIndex.findIndex(goodId);
     }
 
-    public ArrayList<RecordIndex> findBuyerIdIndex(String buyerId, long startTime, long endTime) {
-        return this.buyerIndex.findIndex(buyerId, startTime, endTime);
-    }
-
     public HashMap<String, String> findOrderRecord(RecordIndex recordIndex) {
         HashMap<String, String> result = new HashMap<String, String>();
         String fileName = this.sortOrderFiles[recordIndex.getFileId()];
@@ -141,9 +137,6 @@ public class OrderTable {
             if (result != null) {
                 resultCache.put(cacheIndex, result);
             }
-        } else {
-//            System.out.println("命中缓存 orderId:" + result.get("orderid") + " fileId:"
-//                    + recordIndex.getFileId() + " address:" + recordIndex.getAddress());
         }
         return result;
     }
@@ -200,7 +193,7 @@ public class OrderTable {
         ConcurrentSkipListSet<OrderSystem.Result> results = new ConcurrentSkipListSet<OrderSystem.Result>();
         try {
             CountDownLatch waitForBuyer;
-            HashMap<String, String> buyerRecord = BuyerTable.getInstance().getFormCache(buyerId);
+            HashMap<String, String> buyerRecord = BuyerTable.getInstance().findFormCache(buyerId);
             if (buyerRecord == null) {
                 waitForBuyer = new CountDownLatch(1);
                 // 查找buyerRecord

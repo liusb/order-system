@@ -13,9 +13,9 @@ import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.Collection;
-import java.util.HashMap;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 
 public class BuyerTable {
     private static BuyerTable instance = new BuyerTable();
@@ -43,8 +43,8 @@ public class BuyerTable {
     public void init(Collection<String> buyerFiles) {
         baseTable = new Table("buyerTable");
         baseTable.setBaseColumns(TABLE_COLUMNS);
-        buyerFilesMap = new HashMap<String, Byte>(5);
-        sortBuyerFiles = new String[5];
+        buyerFilesMap = new HashMap<String, Byte>(buyerFiles.size());
+        sortBuyerFiles = new String[buyerFiles.size()];
         for (String file: buyerFiles) {
             byte postfix = (byte)Integer.parseInt(file.substring(file.lastIndexOf('.')+1));
             buyerFilesMap.put(file, postfix);
@@ -53,13 +53,12 @@ public class BuyerTable {
         this.indexCache = new IndexCache(8*1024*OrderTable.BASE_SIZE);
     }
 
-    // 在构造完，准备查询前重新打开，以只读方式打开，缓存为只读，
     public void reopen() {
         resultCache = new TwoLevelCache<String, HashMap<String, String>>(FIRST_LEVEL_CACHE_SIZE, SECOND_LEVEL_CACHE_SIZE);
         this.fileChannels = new AsynchronousFileChannel[this.sortBuyerFiles.length];
     }
 
-
+    // 先从缓存取，取不到再从文件取
     public HashMap<String, String> find(String buyerId) {
         HashMap<String, String> result = resultCache.get(buyerId);
         if (result == null) {
@@ -67,16 +66,16 @@ public class BuyerTable {
             if (result != null) {
                 resultCache.put(buyerId, result);
             }
-        } else {
-//            System.out.println("命中缓存 buyerId: " + buyerId);
         }
         return result;
     }
 
-    public HashMap<String, String> getFormCache(String buyerId) {
+    // 从缓存中取结果
+    public HashMap<String, String> findFormCache(String buyerId) {
         return resultCache.get(buyerId);
     }
 
+    // 同步获取结果
     public HashMap<String, String> findFromFile(String buyerId) {
         HashMap<String, String> result = new HashMap<String, String>();
         Long postfix = Data.getKeyPostfix(buyerId);
@@ -88,7 +87,6 @@ public class BuyerTable {
         String fileName = this.sortBuyerFiles[recordIndex.getFileId()];
         try {
             RandomAccessFile randomAccessFile = new RandomAccessFile(fileName, "r");
-            long fileSize = randomAccessFile.length();
             long pos = recordIndex.getAddress();
             byte[] buffer = new byte[recordIndex.getLength()];
             randomAccessFile.seek(pos);
@@ -115,7 +113,8 @@ public class BuyerTable {
         return result;
     }
 
-    public void findBuyer(String buyerId, CountDownLatch waitForBuyer, HashMap<String, String> buyerRecord) throws IOException {
+    // 异步读 使用 CountDownLatch 等待结果 传入的buyerRecord存结果
+    public void findBuyer(String buyerId, CountDownLatch waitForBuyer, HashMap<String, String> buyerRecord) {
         IndexHandler indexHandler = new IndexHandler();
         IndexEntry index = indexCache.get(Data.getKeyPostfix(buyerId), Data.getKeyPrefix(buyerId));
         if (index == null) {
@@ -124,12 +123,67 @@ public class BuyerTable {
         }
         byte fileId = index.getFileId();
         if (this.fileChannels[fileId] == null) {
-            this.fileChannels[fileId] = AsynchronousFileChannel.open(Paths.get(this.sortBuyerFiles[fileId]),
-                    StandardOpenOption.READ);
+            try {
+                this.fileChannels[fileId] = AsynchronousFileChannel.open(Paths.get(this.sortBuyerFiles[fileId]),
+                        StandardOpenOption.READ);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         IndexAttachment attachment = new IndexAttachment(waitForBuyer, buyerRecord, index);
         this.fileChannels[fileId].read(ByteBuffer.wrap(attachment.buffer), index.getAddress(),
                     attachment, indexHandler);
     }
 
+    public HashMap<String, HashMap<String, String>> findBuyerOfOrder(ArrayList<HashMap<String, String>> orderRecords) {
+        HashMap<String, HashMap<String, String>> results = new HashMap<String, HashMap<String, String>>();
+        HashSet<String> buyerIds = new HashSet<String>();
+        for (HashMap<String, String> orderRecord: orderRecords) {
+            buyerIds.add(orderRecord.get("buyerid"));
+        }
+        HashMap<String, String> buyerRecord;
+        ArrayList<IndexEntry> noCache = new ArrayList<IndexEntry>();
+        for (String buyerId: buyerIds) {
+            buyerRecord = resultCache.get(buyerId);
+            if (buyerRecord != null) {
+                results.put(buyerId, buyerRecord);
+            } else {
+                noCache.add(indexCache.get(Data.getKeyPostfix(buyerId), Data.getKeyPrefix(buyerId)));
+            }
+        }
+        try {
+            findBuyerRecords(noCache, results);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return results;
+    }
+
+    private void findBuyerRecords(ArrayList<IndexEntry> indexes, HashMap<String, HashMap<String, String>> results)
+            throws IOException, ExecutionException, InterruptedException {
+        CountDownLatch latch = new CountDownLatch(indexes.size());
+        ArrayList<IndexAttachment> attachments = new ArrayList<IndexAttachment>(indexes.size());
+        Collections.sort(indexes);
+        IndexHandler indexHandler = new IndexHandler();
+        byte fileId;
+        for (IndexEntry index:indexes) {
+            fileId = index.getFileId();
+            if (this.fileChannels[fileId] == null) {
+                this.fileChannels[fileId] = AsynchronousFileChannel.open(Paths.get(this.sortBuyerFiles[fileId]),
+                        StandardOpenOption.READ);
+            }
+            IndexAttachment attachment = new IndexAttachment(latch, index);
+            attachments.add(attachment);
+            this.fileChannels[fileId].read(ByteBuffer.wrap(attachment.buffer), index.getAddress(),
+                    attachment, indexHandler);
+        }
+        latch.await();
+        String buyerId;
+        for (IndexAttachment attachment: attachments) {
+            buyerId = attachment.record.get("buyerid");
+            results.put(attachment.record.get("buyerid"), attachment.record);
+            resultCache.put(buyerId, attachment.record);
+        }
+    }
 }

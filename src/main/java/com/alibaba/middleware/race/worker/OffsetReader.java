@@ -77,7 +77,7 @@ public class OffsetReader implements Runnable {
                     bArrayOffset = bArrayDataSize-lineBegin;
                     System.arraycopy(bArray, lineBegin, bArray, 0, bArrayOffset);
                     lineBegin = 0;
-                    warpedBuffer = ByteBuffer.wrap(bArray, bArrayOffset, B_SIZE);
+                    warpedBuffer = ByteBuffer.wrap(bArray, bArrayOffset, Math.min(B_SIZE, B_SIZE-bArrayDataSize));
                 }
                 System.out.println("INFO: reade file " + entry.getKey() + " completed. max offset:" + nextLineOffset);
                 fileChannel.close();

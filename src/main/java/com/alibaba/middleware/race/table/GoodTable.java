@@ -4,7 +4,6 @@ package com.alibaba.middleware.race.table;
 import com.alibaba.middleware.race.cache.IndexCache;
 import com.alibaba.middleware.race.cache.IndexEntry;
 import com.alibaba.middleware.race.cache.TwoLevelCache;
-import com.alibaba.middleware.race.index.RecordIndex;
 import com.alibaba.middleware.race.query.IndexAttachment;
 import com.alibaba.middleware.race.query.IndexHandler;
 import com.alibaba.middleware.race.store.Data;
@@ -44,8 +43,8 @@ public class GoodTable {
     public void init(Collection<String> goodFiles) {
         baseTable = new HashTable("goodTable");
         baseTable.setBaseColumns(TABLE_COLUMNS);
-        goodFilesMap = new HashMap<String, Byte>(5);
-        sortGoodFiles = new String[5];
+        goodFilesMap = new HashMap<String, Byte>(goodFiles.size());
+        sortGoodFiles = new String[goodFiles.size()];
         for (String file: goodFiles) {
             byte postfix = (byte)Integer.parseInt(file.substring(file.lastIndexOf('.')+1));
             goodFilesMap.put(file, postfix);
@@ -54,7 +53,6 @@ public class GoodTable {
         this.indexCache = new IndexCache(4*1024*OrderTable.BASE_SIZE);
     }
 
-    // 在构造完，准备查询前重新打开，以只读方式打开，缓存为只读，
     public void reopen() {
         resultCache = new TwoLevelCache<String, HashMap<String, String>>(FIRST_LEVEL_CACHE_SIZE, SECOND_LEVEL_CACHE_SIZE);
         this.fileChannels = new AsynchronousFileChannel[this.sortGoodFiles.length];
@@ -67,10 +65,12 @@ public class GoodTable {
             if (result != null) {
                 resultCache.put(goodId, result);
             }
-        } else {
-//            System.out.println("命中缓存 goodId: " + goodId);
         }
         return result;
+    }
+
+    public HashMap<String, String> findFromCache(String buyerId) {
+        return this.resultCache.get(buyerId);
     }
 
     public HashMap<String, String> findFromFile(String buyerId) {
@@ -84,7 +84,6 @@ public class GoodTable {
         String fileName = this.sortGoodFiles[recordIndex.getFileId()];
         try {
             RandomAccessFile randomAccessFile = new RandomAccessFile(fileName, "r");
-            long fileSize = randomAccessFile.length();
             long pos = recordIndex.getAddress();
             byte[] buffer = new byte[recordIndex.getLength()];
             randomAccessFile.seek(pos);
@@ -109,6 +108,28 @@ public class GoodTable {
             e.printStackTrace();
         }
         return result;
+    }
+
+    // 异步读 使用 CountDownLatch 等待结果 传入的buyerRecord存结果
+    public void findGood(String goodId, CountDownLatch waitForGood, HashMap<String, String> goodRecord) {
+        IndexHandler indexHandler = new IndexHandler();
+        IndexEntry index = indexCache.get(Data.getKeyPostfix(goodId), Data.getKeyPrefix(goodId));
+        if (index == null) {
+            waitForGood.countDown();
+            return;
+        }
+        byte fileId = index.getFileId();
+        if (this.fileChannels[fileId] == null) {
+            try {
+                this.fileChannels[fileId] = AsynchronousFileChannel.open(Paths.get(this.sortGoodFiles[fileId]),
+                        StandardOpenOption.READ);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        IndexAttachment attachment = new IndexAttachment(waitForGood, goodRecord, index);
+        this.fileChannels[fileId].read(ByteBuffer.wrap(attachment.buffer), index.getAddress(),
+                attachment, indexHandler);
     }
 
     public HashMap<String, HashMap<String, String>> findGoodOfOrder(ArrayList<HashMap<String, String>> orderRecords) {

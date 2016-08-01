@@ -5,11 +5,11 @@ import com.alibaba.middleware.race.OrderSystem;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentSkipListSet;
 
-public class SkipListIteroator implements Iterator<OrderSystem.Result> {
+public class SkipListIterator implements Iterator<OrderSystem.Result> {
 
     private Iterator<OrderSystem.Result> result;
 
-    public SkipListIteroator(ConcurrentSkipListSet<OrderSystem.Result> result) {
+    public SkipListIterator(ConcurrentSkipListSet<OrderSystem.Result> result) {
         this.result = result.iterator();
 
     }
