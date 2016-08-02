@@ -43,7 +43,7 @@ public class OffsetParser implements Runnable {
         RecordIndex recordIndex = line.getRecodeIndex();
         Long postfix = Data.getKeyPostfix(rowKey);
         this.indexCache.put(postfix, new IndexEntry(recordIndex.getFileId(),
-                (int)recordIndex.getAddress(), line.getLen()));
+                recordIndex.getRawAddress(), line.getLen()));
     }
 
     private void nextLine() {
