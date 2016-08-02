@@ -89,7 +89,6 @@ public class SystemCheck {
                     }
                 }
                 lineCount++;
-                System.out.println(lineCount);
             }
             System.out.println(file + " checked. total count: " +lineCount);
         }

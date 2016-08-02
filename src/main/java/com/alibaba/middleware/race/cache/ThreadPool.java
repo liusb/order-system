@@ -14,8 +14,8 @@ public class ThreadPool {
     public ThreadPoolExecutor pool;
 
     private ThreadPool() {
-         this.pool = new ThreadPoolExecutor(256, 256, 0L, TimeUnit.MILLISECONDS,
-                        new LinkedBlockingQueue<Runnable>(2048));
+         this.pool = new ThreadPoolExecutor(512, 512, 0L, TimeUnit.MILLISECONDS,
+                        new LinkedBlockingQueue<Runnable>(4096));
         pool.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
     }
 }

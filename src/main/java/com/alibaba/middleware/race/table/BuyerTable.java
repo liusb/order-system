@@ -25,7 +25,7 @@ public class BuyerTable {
     }
     private BuyerTable() { }
 
-    private TwoLevelCache<String, HashMap<String, String>> resultCache;
+    //private TwoLevelCache<String, HashMap<String, String>> resultCache;
 
     private static final int FIRST_LEVEL_CACHE_SIZE = 8*OrderTable.BASE_SIZE;  // 0.251125k/record
     private static final int SECOND_LEVEL_CACHE_SIZE = 8*OrderTable.BASE_SIZE;
@@ -55,7 +55,7 @@ public class BuyerTable {
     }
 
     public void reopen() {
-        resultCache = new TwoLevelCache<String, HashMap<String, String>>(FIRST_LEVEL_CACHE_SIZE, SECOND_LEVEL_CACHE_SIZE);
+        //resultCache = new TwoLevelCache<String, HashMap<String, String>>(FIRST_LEVEL_CACHE_SIZE, SECOND_LEVEL_CACHE_SIZE);
         this.fileChannels = new AsynchronousFileChannel[this.sortBuyerFiles.length];
         try {
             HashSet<StandardOpenOption>openOptions = new HashSet<StandardOpenOption>(
@@ -70,21 +70,21 @@ public class BuyerTable {
     }
 
     // 先从缓存取，取不到再从文件取
-    public HashMap<String, String> find(String buyerId) {
-        HashMap<String, String> result = resultCache.get(buyerId);
-        if (result == null) {
-            result = findFromFile(buyerId);
-            if (result != null) {
-                resultCache.put(buyerId, result);
-            }
-        }
-        return result;
-    }
+//    public HashMap<String, String> find(String buyerId) {
+//        HashMap<String, String> result = resultCache.get(buyerId);
+//        if (result == null) {
+//            result = findFromFile(buyerId);
+//            if (result != null) {
+//                resultCache.put(buyerId, result);
+//            }
+//        }
+//        return result;
+//    }
 
     // 从缓存中取结果
-    public HashMap<String, String> findFormCache(String buyerId) {
-        return resultCache.get(buyerId);
-    }
+//    public HashMap<String, String> findFormCache(String buyerId) {
+//        return resultCache.get(buyerId);
+//    }
 
     // 同步获取结果
     public HashMap<String, String> findFromFile(String buyerId) {
@@ -143,15 +143,15 @@ public class BuyerTable {
         for (HashMap<String, String> orderRecord: orderRecords) {
             buyerIds.add(orderRecord.get("buyerid"));
         }
-        HashMap<String, String> buyerRecord;
+//        HashMap<String, String> buyerRecord;
         ArrayList<IndexEntry> noCache = new ArrayList<IndexEntry>();
         for (String buyerId: buyerIds) {
-            buyerRecord = resultCache.get(buyerId);
-            if (buyerRecord != null) {
-                results.put(buyerId, buyerRecord);
-            } else {
-                noCache.add(indexCache.get(Data.getKeyPostfix(buyerId)));
-            }
+//            buyerRecord = resultCache.get(buyerId);
+//            if (buyerRecord != null) {
+//                results.put(buyerId, buyerRecord);
+//            } else {
+            noCache.add(indexCache.get(Data.getKeyPostfix(buyerId)));
+//            }
         }
         try {
             findBuyerRecords(noCache, results);
@@ -181,11 +181,11 @@ public class BuyerTable {
                     attachment, indexHandler);
         }
         latch.await();
-        String buyerId;
+//        String buyerId;
         for (IndexAttachment attachment: attachments) {
-            buyerId = attachment.record.get("buyerid");
+//            buyerId = attachment.record.get("buyerid");
             results.put(attachment.record.get("buyerid"), attachment.record);
-            resultCache.put(buyerId, attachment.record);
+//            resultCache.put(buyerId, attachment.record);
         }
     }
 }

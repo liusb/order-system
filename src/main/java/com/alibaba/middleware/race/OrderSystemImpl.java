@@ -116,26 +116,26 @@ public class OrderSystemImpl implements OrderSystem {
 
         HashMap<String, String> goodRecord = null;
         HashMap<String, String> buyerRecord = null;
-        HashMap<String, String> orderRecord = OrderTable.getInstance().findOrder(orderIdRowIndex);
+        HashMap<String, String> orderRecord = OrderTable.getInstance().findOrderRecord(orderIdRowIndex);
         CountDownLatch waitForGood = null;
         CountDownLatch waitForBuyer = null;
         if (goodTableKeys == null || goodTableKeys.size() > 0) {
             String goodId = orderRecord.get("goodid");
-            goodRecord = GoodTable.getInstance().findFromCache(goodId);
-            if (goodRecord == null) {
+//            goodRecord = GoodTable.getInstance().findFromCache(goodId);
+//            if (goodRecord == null) {
                 goodRecord = new HashMap<String, String>();
                 waitForGood = new CountDownLatch(1);
                 GoodTable.getInstance().findGood(goodId, waitForGood, goodRecord);
-            }
+//            }
         }
         if (buyerTableKeys == null || buyerTableKeys.size() > 0) {
             String buyerId = orderRecord.get("buyerid");
-            buyerRecord = BuyerTable.getInstance().findFormCache(buyerId);
-            if (buyerRecord == null) {
+//            buyerRecord = BuyerTable.getInstance().findFormCache(buyerId);
+//            if (buyerRecord == null) {
                 buyerRecord = new HashMap<String, String>();
                 waitForBuyer = new CountDownLatch(1);
                 BuyerTable.getInstance().findBuyer(buyerId, waitForBuyer, buyerRecord);
-            }
+//            }
         }
         if (waitForBuyer != null) {
             try {
@@ -263,12 +263,12 @@ public class OrderSystemImpl implements OrderSystem {
         HashMap<String, String> goodRecord = null;
         CountDownLatch waitForGood = null;
         if (goodTableKeys == null || goodTableKeys.size() > 0) {
-            goodRecord = GoodTable.getInstance().findFromCache(goodId);
-            if (goodRecord == null) {
+//            goodRecord = GoodTable.getInstance().findFromCache(goodId);
+//            if (goodRecord == null) {
                 goodRecord = new HashMap<String, String>();
                 waitForGood = new CountDownLatch(1);
                 GoodTable.getInstance().findGood(goodId, waitForGood, goodRecord);
-            }
+//            }
         }
 
         HashMap<String, HashMap<String, String>> buyerRecords = null;
@@ -289,7 +289,7 @@ public class OrderSystemImpl implements OrderSystem {
         HashMap<String, String> buyerRecord = null;
         for (HashMap<String, String> orderRecord : orderRecords) {
             if (buyerRecords != null) {
-                buyerRecord = BuyerTable.getInstance().find(orderRecord.get("buyerid"));
+                buyerRecord = buyerRecords.get(orderRecord.get("buyerid"));
             }
             if (keys == null) {
                 result = joinResult(orderRecord, buyerRecord, goodRecord);
@@ -345,7 +345,7 @@ public class OrderSystemImpl implements OrderSystem {
         }
         HashMap<String, String> goodRecord = null;
         if (GoodTable.getInstance().baseTable.containColumn(key)) {
-            goodRecord = GoodTable.getInstance().find(goodId);
+            goodRecord = GoodTable.getInstance().findFromFile(goodId);
             String value = goodRecord.get(key);
             if (value == null) {
                 return null;

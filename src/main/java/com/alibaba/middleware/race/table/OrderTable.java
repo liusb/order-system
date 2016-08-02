@@ -26,7 +26,7 @@ public class OrderTable {
     }
     private OrderTable() {}
 
-    private TwoLevelCache<Long, HashMap<String, String>> resultCache;
+//    private TwoLevelCache<Long, HashMap<String, String>> resultCache;
 
     public static final int BASE_SIZE = 1024;
     private static final int GOOD_INDEX_BUCKET_SIZE = 64*BASE_SIZE;
@@ -86,7 +86,7 @@ public class OrderTable {
         orderIndex.reopen();
         buyerIndex.reopen();
         this.prepared = true;
-        resultCache = new TwoLevelCache<Long, HashMap<String, String>>(FIRST_LEVEL_CACHE_SIZE, SECOND_LEVEL_CACHE_SIZE);
+//        resultCache = new TwoLevelCache<Long, HashMap<String, String>>(FIRST_LEVEL_CACHE_SIZE, SECOND_LEVEL_CACHE_SIZE);
         this.fileChannels = new AsynchronousFileChannel[this.sortOrderFiles.length];
         try {
             HashSet<StandardOpenOption>openOptions = new HashSet<StandardOpenOption>(
@@ -140,17 +140,17 @@ public class OrderTable {
         return result;
     }
 
-    public HashMap<String, String> findOrder(RecordIndex recordIndex) {
-        long cacheIndex = (recordIndex.getAddress()<<6)|recordIndex.getFileId();
-        HashMap<String, String> result = resultCache.get(cacheIndex);
-        if (result == null) {
-            result = this.findOrderRecord(recordIndex);
-            if (result != null) {
-                resultCache.put(cacheIndex, result);
-            }
-        }
-        return result;
-    }
+//    public HashMap<String, String> findOrder(RecordIndex recordIndex) {
+//        long cacheIndex = (recordIndex.getAddress()<<6)|recordIndex.getFileId();
+//        HashMap<String, String> result = resultCache.get(cacheIndex);
+//        if (result == null) {
+//            result = this.findOrderRecord(recordIndex);
+//            if (result != null) {
+//                resultCache.put(cacheIndex, result);
+//            }
+//        }
+//        return result;
+//    }
 
     public ArrayList<HashMap<String, String>> findOrders(ArrayList<RecordIndex> recordIndices) {
         ArrayList<HashMap<String, String>> results = new ArrayList<HashMap<String, String>>();
@@ -159,12 +159,12 @@ public class OrderTable {
         long cacheIndex;
         for (RecordIndex recordIndex: recordIndices) {
             cacheIndex = (recordIndex.getAddress()<<6)|recordIndex.getFileId();
-            result = resultCache.get(cacheIndex);
-            if (result != null) {
-                results.add(result);
-            } else {
+//            result = resultCache.get(cacheIndex);
+//            if (result != null) {
+//                results.add(result);
+//            } else {
                 notCache.add(recordIndex);
-            }
+//            }
         }
         try {
             findOrderRecords(notCache, results);
@@ -191,23 +191,23 @@ public class OrderTable {
         latch.await();
         for (RecordAttachment attachment: attachments) {
             results.add(attachment.record);
-            resultCache.put((attachment.recordIndex.getAddress() << 6) | attachment.recordIndex.getFileId(),
-                    attachment.record);
+//            resultCache.put((attachment.recordIndex.getAddress() << 6) | attachment.recordIndex.getFileId(),
+//                    attachment.record);
         }
     }
 
     public ArrayList<ResultImpl> findByBuyer(String buyerId, long startTime, long endTime) {
         ArrayList<ResultImpl> results = new ArrayList<ResultImpl>();
         CountDownLatch waitForBuyer;
-        HashMap<String, String> buyerRecord = BuyerTable.getInstance().findFormCache(buyerId);
-        if (buyerRecord == null) {
+        HashMap<String, String> buyerRecord; // = BuyerTable.getInstance().findFormCache(buyerId);
+//        if (buyerRecord == null) {
             waitForBuyer = new CountDownLatch(1);
             // 查找buyerRecord
             buyerRecord = new HashMap<String, String>();
             BuyerTable.getInstance().findBuyer(buyerId, waitForBuyer, buyerRecord);
-        } else {
-            waitForBuyer = new CountDownLatch(0);
-        }
+//        } else {
+//            waitForBuyer = new CountDownLatch(0);
+//        }
         CountDownLatch waitForResult = new CountDownLatch(1);
         BuyerCondition condition = new BuyerCondition(Data.getKeyPostfix(buyerId), startTime, endTime);
         int fileId = OrderTable.getInstance().buyerIndex.getIndex().getFileIndex(HashIndex.getHashCode(buyerId));

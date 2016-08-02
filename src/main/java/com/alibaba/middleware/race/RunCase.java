@@ -32,7 +32,7 @@ public class RunCase {
         os.construct(orderFiles, buyerFiles, goodFiles, storeFolders);
 
         // 检查构建是否有错误
-        //SystemCheck.systemCheck(orderFiles, buyerFiles, goodFiles, os);
+        SystemCheck.systemCheck(orderFiles, buyerFiles, goodFiles, os);
 
         // 用例
         long beginTime = System.currentTimeMillis();
