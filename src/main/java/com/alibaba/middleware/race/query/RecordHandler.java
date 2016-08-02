@@ -29,7 +29,7 @@ public class RecordHandler implements CompletionHandler<Integer, RecordAttachmen
         attachment.buffer = null;
         attachment.latch.countDown();
         if (!readAllRow) {
-            System.out.println("ERROR: 没有都到完整的一行数据");
+            throw new RuntimeException("ERROR: 没有都到完整的一行数据");
         }
     }
 

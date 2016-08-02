@@ -48,7 +48,7 @@ public class OffsetReader implements Runnable {
                     for (bArrayDataSize = bArrayOffset + getSize; bArrayOffset < bArrayDataSize; bArrayOffset++) {
                         if (bArray[bArrayOffset]=='\n') {
                             lineLength = bArrayOffset-lineBegin;
-                            OffsetLine orderLine = new OffsetLine(new RecordIndex(fileId, nextLineOffset),
+                            OffsetLine orderLine = new OffsetLine(new RecordIndex(fileId, (int)nextLineOffset),
                                     new String(bArray, lineBegin, lineLength), lineLength+1);
                             if (maxLineSize < lineLength) {
                                 maxLineSize = lineLength;

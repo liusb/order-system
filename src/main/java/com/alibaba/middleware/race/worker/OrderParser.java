@@ -54,8 +54,8 @@ public class OrderParser implements Runnable {
     @Override
     public void run() {
         this.threadId = Thread.currentThread().getId();
-        long maxOrderId = Long.MIN_VALUE, minOrderId = Long.MAX_VALUE;
-        long maxCreateTime = Long.MIN_VALUE, minCreateTime = Long.MAX_VALUE;
+//        long maxOrderId = Long.MIN_VALUE, minOrderId = Long.MAX_VALUE;
+//        long maxCreateTime = Long.MIN_VALUE, minCreateTime = Long.MAX_VALUE;
         while (true) {
             this.nextLine();
             if(line.getLine().isEmpty()) {
@@ -73,21 +73,21 @@ public class OrderParser implements Runnable {
                 if (key.equals("orderid")) {
                     findCount++;
                     orderId = Long.parseLong(value);
-                    if (orderId > maxOrderId) {
-                        maxOrderId = orderId;
-                    }
-                    if (orderId < minOrderId){
-                        minOrderId = orderId;
-                    }
+//                    if (orderId > maxOrderId) {
+//                        maxOrderId = orderId;
+//                    }
+//                    if (orderId < minOrderId){
+//                        minOrderId = orderId;
+//                    }
                 } else if (key.equals("createtime")) {
                     findCount++;
                     createTime = Long.parseLong(value);
-                    if (createTime > maxCreateTime) {
-                        maxCreateTime = createTime;
-                    }
-                    if (createTime < minCreateTime) {
-                        minCreateTime = createTime;
-                    }
+//                    if (createTime > maxCreateTime) {
+//                        maxCreateTime = createTime;
+//                    }
+//                    if (createTime < minCreateTime) {
+//                        minCreateTime = createTime;
+//                    }
                 } else if (key.equals("buyerid")){
                     findCount++;
                     buyerId = value;
@@ -131,8 +131,8 @@ public class OrderParser implements Runnable {
             }
             rowCount ++;
         }
-        System.out.println("INFO: Parser thread completed. rowCount:" + rowCount + " Thread id:" + threadId
-                + " maxOrderId:" + maxOrderId + " minOrderId:" + minOrderId
-                + " maxCreateTime:" + maxCreateTime + " minCreateTime:" + minCreateTime);
+        System.out.println("INFO: Parser thread completed. rowCount:" + rowCount + " Thread id:" + threadId);
+//                + " maxOrderId:" + maxOrderId + " minOrderId:" + minOrderId
+//                + " maxCreateTime:" + maxCreateTime + " minCreateTime:" + minCreateTime);
     }
 }

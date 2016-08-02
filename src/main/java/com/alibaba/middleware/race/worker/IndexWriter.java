@@ -38,11 +38,12 @@ public class IndexWriter<T extends RowIndex> implements Runnable {
     }
 
     private void writeToBuffer(RecordIndex recordIndex) {
-        buffer.writeLong((recordIndex.getAddress()<<6)|recordIndex.getFileId());
+        buffer.writeByte(recordIndex.getFileId());
+        buffer.writeInt(recordIndex.getRawAddress());
     }
 
     private void writeToBuffer(GoodIdRowIndex goodIdRowIndex) {
-        buffer.writeKeyString(goodIdRowIndex.getGoodId());
+        buffer.writeLong(Data.getKeyPostfix(goodIdRowIndex.getGoodId()));
         writeToBuffer(goodIdRowIndex.getRecodeIndex());
     }
 
@@ -52,7 +53,7 @@ public class IndexWriter<T extends RowIndex> implements Runnable {
     }
 
     private void writeToBuffer(BuyerIdRowIndex buyerIdRowIndex) {
-        buffer.writeKeyString(buyerIdRowIndex.getBuyerId());
+        buffer.writeLong(Data.getKeyPostfix(buyerIdRowIndex.getBuyerId()));
         buffer.writeLong(buyerIdRowIndex.getCreateTime());
         writeToBuffer(buyerIdRowIndex.getRecodeIndex());
     }
@@ -65,7 +66,7 @@ public class IndexWriter<T extends RowIndex> implements Runnable {
         int inCount = 0;
         while (true) {
             this.nextRow();
-            if(row.getRecodeIndex().getAddress()==-1) {
+            if(row.getRecodeIndex().getRawAddress()==-1) {
                 break;
             }
             buffer.reset();

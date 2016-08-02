@@ -1,7 +1,6 @@
 package com.alibaba.middleware.race.table;
 
 
-import com.alibaba.middleware.race.cache.IndexCache;
 import com.alibaba.middleware.race.cache.IndexEntry;
 import com.alibaba.middleware.race.cache.ThreadPool;
 import com.alibaba.middleware.race.cache.TwoLevelCache;
@@ -16,6 +15,7 @@ import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
@@ -28,8 +28,8 @@ public class GoodTable {
 
     private TwoLevelCache<String, HashMap<String, String>> resultCache;
 
-    private static final int FIRST_LEVEL_CACHE_SIZE = 128*OrderTable.BASE_SIZE;  //0.904k/record
-    private static final int SECOND_LEVEL_CACHE_SIZE = 2*256*OrderTable.BASE_SIZE;
+    private static final int FIRST_LEVEL_CACHE_SIZE = 8*OrderTable.BASE_SIZE;  //0.904k/record
+    private static final int SECOND_LEVEL_CACHE_SIZE = 8*OrderTable.BASE_SIZE;
     
     private static final String[] TABLE_COLUMNS = {"goodid"};
     public Table baseTable;
@@ -38,7 +38,7 @@ public class GoodTable {
     public String[] sortGoodFiles;
     private AsynchronousFileChannel[] fileChannels;
 
-    public IndexCache indexCache;
+    public ConcurrentHashMap<Long, IndexEntry> indexCache;
 
     // 在构造之前做初始工作
     public void init(Collection<String> goodFiles) {
@@ -51,7 +51,7 @@ public class GoodTable {
             goodFilesMap.put(file, postfix);
             sortGoodFiles[postfix] = file;
         }
-        this.indexCache = new IndexCache(4*1024*OrderTable.BASE_SIZE);
+        this.indexCache = new ConcurrentHashMap<Long, IndexEntry>(4*1024*OrderTable.BASE_SIZE);
     }
 
     public void reopen() {
@@ -88,8 +88,7 @@ public class GoodTable {
     public HashMap<String, String> findFromFile(String buyerId) {
         HashMap<String, String> result = new HashMap<String, String>();
         Long postfix = Data.getKeyPostfix(buyerId);
-        short prefix = Data.getKeyPrefix(buyerId);
-        IndexEntry recordIndex = indexCache.get(postfix, prefix);
+        IndexEntry recordIndex = indexCache.get(postfix);
         if (recordIndex == null) {
             return null;
         }
@@ -125,7 +124,7 @@ public class GoodTable {
     // 异步读 使用 CountDownLatch 等待结果 传入的buyerRecord存结果
     public void findGood(String goodId, CountDownLatch waitForGood, HashMap<String, String> goodRecord) {
         IndexHandler indexHandler = new IndexHandler();
-        IndexEntry index = indexCache.get(Data.getKeyPostfix(goodId), Data.getKeyPrefix(goodId));
+        IndexEntry index = indexCache.get(Data.getKeyPostfix(goodId));
         if (index == null) {
             waitForGood.countDown();
             return;
@@ -149,7 +148,7 @@ public class GoodTable {
             if (goodRecord != null) {
                 results.put(goodId, goodRecord);
             } else {
-                noCache.add(indexCache.get(Data.getKeyPostfix(goodId), Data.getKeyPrefix(goodId)));
+                noCache.add(indexCache.get(Data.getKeyPostfix(goodId)));
             }
         }
         try {

@@ -2,22 +2,16 @@ package com.alibaba.middleware.race.cache;
 
 
 public class IndexEntry implements Comparable<IndexEntry> {
-    public short prefix;
-    private byte fileId;
-    private int offset;
-    private int length;
-    public IndexEntry next;
+    final private int fileIdAndLength;
+    final private int offset;
 
-    public IndexEntry(short prefix, byte fileId, int offset, int length) {
-        this.prefix = prefix;
-        this.fileId = fileId;
+    public IndexEntry(byte fileId, int offset, int length) {
+        this.fileIdAndLength = (length<<8)|fileId;
         this.offset = offset;
-        this.length = length;
-        this.next = null;
     }
 
     public byte getFileId() {
-        return fileId;
+        return (byte)(fileIdAndLength&0xff);
     }
 
     public long getAddress() {
@@ -25,15 +19,17 @@ public class IndexEntry implements Comparable<IndexEntry> {
     }
 
     public int getLength() {
-        return length;
+        return fileIdAndLength>>8;
     }
 
     @Override
     public int compareTo(IndexEntry o) {
-        if (fileId == o.fileId) {
+        int thisFileId = fileIdAndLength&0xff;
+        int thatFIleId = o.fileIdAndLength&0xff;
+        if (thisFileId == thatFIleId) {
             return offset < o.offset ? -1: 1;
         } else {
-            return fileId < o.fileId ? -1: 1;
+            return thisFileId < thatFIleId ? -1: 1;
         }
     }
 }

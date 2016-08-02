@@ -1,6 +1,6 @@
 package com.alibaba.middleware.race.worker;
 
-import com.alibaba.middleware.race.cache.IndexCache;
+import com.alibaba.middleware.race.cache.IndexEntry;
 import com.alibaba.middleware.race.index.*;
 import com.alibaba.middleware.race.store.PageStore;
 import com.alibaba.middleware.race.table.*;
@@ -8,6 +8,7 @@ import com.alibaba.middleware.race.table.*;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class WorkerManager implements Runnable {
@@ -241,7 +242,7 @@ public class WorkerManager implements Runnable {
     }
 
     private static ArrayList<OffsetParser> createOffsetParser(ArrayList<LinkedBlockingQueue<OffsetLine>> inQueues,
-                                                       IndexCache indexCache, Table table) {
+                                                              ConcurrentHashMap<Long, IndexEntry> indexCache, Table table) {
         ArrayList<OffsetParser> parsers = new ArrayList<OffsetParser>();
         for (LinkedBlockingQueue<OffsetLine> queue: inQueues) {
             parsers.add(new OffsetParser(queue, indexCache, table));

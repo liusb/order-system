@@ -1,6 +1,5 @@
 package com.alibaba.middleware.race.table;
 
-import com.alibaba.middleware.race.cache.IndexCache;
 import com.alibaba.middleware.race.cache.IndexEntry;
 import com.alibaba.middleware.race.cache.ThreadPool;
 import com.alibaba.middleware.race.cache.TwoLevelCache;
@@ -15,6 +14,7 @@ import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
@@ -27,8 +27,8 @@ public class BuyerTable {
 
     private TwoLevelCache<String, HashMap<String, String>> resultCache;
 
-    private static final int FIRST_LEVEL_CACHE_SIZE = 1024*OrderTable.BASE_SIZE;  // 0.251125k/record
-    private static final int SECOND_LEVEL_CACHE_SIZE = 2*1024*OrderTable.BASE_SIZE;
+    private static final int FIRST_LEVEL_CACHE_SIZE = 8*OrderTable.BASE_SIZE;  // 0.251125k/record
+    private static final int SECOND_LEVEL_CACHE_SIZE = 8*OrderTable.BASE_SIZE;
 
     private static final String[] TABLE_COLUMNS = {"buyerid"};
     public Table baseTable;
@@ -38,7 +38,7 @@ public class BuyerTable {
     public String[] sortBuyerFiles;
     private AsynchronousFileChannel[] fileChannels;
 
-    public IndexCache indexCache;
+    public ConcurrentHashMap<Long, IndexEntry> indexCache;
 
     // 在构造之前做初始工作
     public void init(Collection<String> buyerFiles) {
@@ -51,7 +51,7 @@ public class BuyerTable {
             buyerFilesMap.put(file, postfix);
             sortBuyerFiles[postfix] = file;
         }
-        this.indexCache = new IndexCache(8*1024*OrderTable.BASE_SIZE);
+        this.indexCache = new ConcurrentHashMap<Long, IndexEntry>(8*1024*OrderTable.BASE_SIZE);
     }
 
     public void reopen() {
@@ -90,8 +90,7 @@ public class BuyerTable {
     public HashMap<String, String> findFromFile(String buyerId) {
         HashMap<String, String> result = new HashMap<String, String>();
         Long postfix = Data.getKeyPostfix(buyerId);
-        short prefix = Data.getKeyPrefix(buyerId);
-        IndexEntry recordIndex = indexCache.get(postfix, prefix);
+        IndexEntry recordIndex = indexCache.get(postfix);
         if (recordIndex == null) {
             return null;
         }
@@ -127,7 +126,7 @@ public class BuyerTable {
     // 异步读 使用 CountDownLatch 等待结果 传入的buyerRecord存结果
     public void findBuyer(String buyerId, CountDownLatch waitForBuyer, HashMap<String, String> buyerRecord) {
         IndexHandler indexHandler = new IndexHandler();
-        IndexEntry index = indexCache.get(Data.getKeyPostfix(buyerId), Data.getKeyPrefix(buyerId));
+        IndexEntry index = indexCache.get(Data.getKeyPostfix(buyerId));
         if (index == null) {
             waitForBuyer.countDown();
             return;
@@ -151,7 +150,7 @@ public class BuyerTable {
             if (buyerRecord != null) {
                 results.put(buyerId, buyerRecord);
             } else {
-                noCache.add(indexCache.get(Data.getKeyPostfix(buyerId), Data.getKeyPrefix(buyerId)));
+                noCache.add(indexCache.get(Data.getKeyPostfix(buyerId)));
             }
         }
         try {

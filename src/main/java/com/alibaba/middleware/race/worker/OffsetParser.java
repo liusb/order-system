@@ -1,6 +1,5 @@
 package com.alibaba.middleware.race.worker;
 
-import com.alibaba.middleware.race.cache.IndexCache;
 import com.alibaba.middleware.race.cache.IndexEntry;
 import com.alibaba.middleware.race.index.RecordIndex;
 import com.alibaba.middleware.race.store.Data;
@@ -8,17 +7,18 @@ import com.alibaba.middleware.race.table.Table;
 import com.alibaba.middleware.race.table.OffsetLine;
 
 import java.util.StringTokenizer;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class OffsetParser implements Runnable {
     private LinkedBlockingQueue<OffsetLine> in;
     private OffsetLine line;
-    private IndexCache indexCache;
+    private ConcurrentHashMap<Long, IndexEntry> indexCache;
     private Table table;
     private int rowCount;
     private long threadId;
 
-    public OffsetParser(LinkedBlockingQueue<OffsetLine> in, IndexCache indexCache, Table table) {
+    public OffsetParser(LinkedBlockingQueue<OffsetLine> in, ConcurrentHashMap<Long, IndexEntry> indexCache, Table table) {
         this.in = in;
         this.line = null;
         this.indexCache = indexCache;
@@ -42,8 +42,7 @@ public class OffsetParser implements Runnable {
         }
         RecordIndex recordIndex = line.getRecodeIndex();
         Long postfix = Data.getKeyPostfix(rowKey);
-        short prefix = Data.getKeyPrefix(rowKey);
-        this.indexCache.put(postfix, new IndexEntry(prefix, recordIndex.getFileId(),
+        this.indexCache.put(postfix, new IndexEntry(recordIndex.getFileId(),
                 (int)recordIndex.getAddress(), line.getLen()));
     }
 

@@ -14,22 +14,12 @@ public class IndexCache {
         IndexEntry indexEntry = cache.get(key);
         if (indexEntry == null) {
             cache.put(key, entry);
-        } else {
-            entry.next = indexEntry.next;
-            indexEntry.next = entry;
-            System.out.println("WARN: Key 冲突:" + key);
         }
     }
 
-    public IndexEntry get(Long key, short prefix) {
+    public IndexEntry get(Long key) {
         IndexEntry entry = cache.get(key);
-        while (entry != null) {
-            if (entry.prefix == prefix) {
-                return entry;
-            }
-            entry = entry.next;
-        }
-        return null;
+        return entry;
     }
 
 }

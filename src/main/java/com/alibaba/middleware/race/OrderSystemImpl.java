@@ -4,7 +4,6 @@ import com.alibaba.middleware.race.index.RecordIndex;
 import com.alibaba.middleware.race.result.KVImpl;
 import com.alibaba.middleware.race.result.ResultImpl;
 import com.alibaba.middleware.race.result.ResultIterator;
-import com.alibaba.middleware.race.result.SkipListIterator;
 import com.alibaba.middleware.race.table.*;
 import com.alibaba.middleware.race.worker.WorkerManager;
 
@@ -156,7 +155,7 @@ public class OrderSystemImpl implements OrderSystem {
         if (keys == null) {
             result = joinResult(orderRecord, buyerRecord, goodRecord);
         } else {
-            result = new HashMap<String, KVImpl>();
+            result = new HashMap<String, KVImpl>(keys.size());
             String value;
             for (String key: orderTableKeys) {
                 value = orderRecord.get(key);
@@ -201,19 +200,6 @@ public class OrderSystemImpl implements OrderSystem {
                 e.printStackTrace();
             }
         }
-//        ArrayList<ResultImpl> results = new ArrayList<ResultImpl>();
-//        ArrayList<RecordIndex> buyerIdRowIndices = OrderTable.getInstance()
-//                .findBuyerIdIndex(buyerId, startTime, endTime);
-//        HashMap<String, String> buyerRecord = BuyerTable.getInstance().find(buyerId);
-//        ArrayList<HashMap<String, String>>  orderRecords = OrderTable.getInstance().findOrders(buyerIdRowIndices);
-//        for (HashMap<String, String> order : orderRecords) {
-//            String goodId = order.get("goodid");
-//            HashMap<String, String> goodRecord = GoodTable.getInstance().find(goodId);
-//            HashMap<String, KVImpl> result = joinResult(order, buyerRecord, goodRecord);
-//            results.add(new ResultImpl(Long.parseLong(order.get("orderid")),
-//                    result, Long.parseLong(order.get("createtime"))));
-//        }
-//        return new ResultIterator(results);
 
         return new ResultIterator(OrderTable.getInstance().findByBuyer(buyerId, startTime, endTime));
 
@@ -298,7 +284,7 @@ public class OrderSystemImpl implements OrderSystem {
             }
         }
 
-        ArrayList<ResultImpl> results = new ArrayList<ResultImpl>();
+        ArrayList<ResultImpl> results = new ArrayList<ResultImpl>(orderRecords.size());
         HashMap<String, KVImpl> result;
         HashMap<String, String> buyerRecord = null;
         for (HashMap<String, String> orderRecord : orderRecords) {
