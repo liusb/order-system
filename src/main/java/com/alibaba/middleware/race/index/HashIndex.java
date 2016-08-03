@@ -14,8 +14,8 @@ public class HashIndex {
 
     public static int getHashCode(Object key) {
         if (key instanceof String) {
-            //return sun.misc.Hashing.stringHash32((String) key);
-            return key.hashCode();
+            return sun.misc.Hashing.stringHash32((String) key);
+            //return key.hashCode();
         }
 
         int h = key.hashCode();
