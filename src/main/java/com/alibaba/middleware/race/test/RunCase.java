@@ -1,5 +1,8 @@
-package com.alibaba.middleware.race;
+package com.alibaba.middleware.race.test;
 
+import com.alibaba.middleware.race.OrderSystem;
+import com.alibaba.middleware.race.OrderSystemImpl;
+import com.alibaba.middleware.race.test.SystemCheck;
 import com.alibaba.middleware.race.worker.LineReader;
 
 import java.io.IOException;
@@ -57,14 +60,17 @@ public class RunCase {
         String resultStr;
         OrderSystem.KeyValue keyValue;
         Iterator<OrderSystem.Result> resultIterator;
-        long queryByBuyerTime = 0;
+        long queryByOrderTime = 0, orderCount=0;
+        long queryByBuyerTime = 0, buyerCount=0;
+        long queryByGoodTime = 0, goodCount=0;
+        long queryBySumTime = 0, sumCount=0;
         for (int i=0; i<caseFileLimit; i++) {
             LineReader lineReader = new LineReader("./prerun_data/case/case.1."+i);
-            System.out.println("正在评测的文件为：case.1." +i);
+            System.out.print("正在评测的文件为：case.1." + i);
             while (true) {
                 line = lineReader.nextLine();
                 if (line == null) {
-                    System.out.print("Good Job.");
+                    System.out.println(" Good Job.");
                     break;
                 }
                 if ("CASE:QUERY_ORDER".equals(line)) {
@@ -73,7 +79,10 @@ public class RunCase {
                     keysStr = lineReader.nextLine();
                     keys = parseKeys(keysStr);
                     lineReader.nextLine();
+                    long begin = System.currentTimeMillis();
                     result = os.queryOrder(orderId, keys);
+                    queryByOrderTime += (System.currentTimeMillis()-begin);
+                    orderCount++;
                     if (result != null) {
                         line = lineReader.nextLine();
                         resultStr = result.toString();
@@ -102,6 +111,7 @@ public class RunCase {
                     long begin = System.currentTimeMillis();
                     resultIterator = os.queryOrdersByBuyer(startTime, endTime, buyerid);
                     queryByBuyerTime += (System.currentTimeMillis()-begin);
+                    buyerCount++;
                     while (resultIterator.hasNext()) {
                         line = lineReader.nextLine();
                         result = resultIterator.next();
@@ -128,7 +138,10 @@ public class RunCase {
                     keysStr = lineReader.nextLine();
                     keys = parseKeys(keysStr);
                     lineReader.nextLine();
+                    long begin = System.currentTimeMillis();
                     resultIterator = os.queryOrdersBySaler(salerid, goodid, keys);
+                    queryByGoodTime += (System.currentTimeMillis()-begin);
+                    goodCount++;
                     while (resultIterator.hasNext()) {
                         line = lineReader.nextLine();
                         result = resultIterator.next();
@@ -151,7 +164,10 @@ public class RunCase {
                     goodid = line.substring(line.indexOf(':') + 1);
                     line = lineReader.nextLine();
                     key = line.substring(line.indexOf('[') + 1, line.indexOf(']') - 1);
+                    long begin = System.currentTimeMillis();
                     keyValue = os.sumOrdersByGood(goodid, key);
+                    queryBySumTime += (System.currentTimeMillis()-begin);
+                    sumCount++;
                     line = lineReader.nextLine();
                     if ((keyValue != null &&
                             !compareSum(line.substring(line.indexOf(':') + 1), keyValue.valueAsString()))
@@ -163,7 +179,14 @@ public class RunCase {
             }
             lineReader.close();
         }
-        System.out.println("queryByBuyerTime: " + queryByBuyerTime);
+        System.out.println("queryByOrderTime: " + queryByOrderTime + " count:"
+                + orderCount + " avg:" + queryByOrderTime*0.1/orderCount);
+        System.out.println("queryByBuyerTime: " + queryByBuyerTime +  " count:"
+                + buyerCount + " avg:" + queryByBuyerTime*0.1/buyerCount);
+        System.out.println("queryByGoodTime: " + queryByGoodTime+ " count:"
+                + goodCount + " avg:" + queryByGoodTime*0.1/goodCount);
+        System.out.println("queryBySumTime: " + queryBySumTime+ " count:"
+                + sumCount + " avg:" + queryBySumTime*0.1/sumCount);
     }
 
     private static Collection<String> parseKeys(String line) {

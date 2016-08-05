@@ -1,5 +1,6 @@
-package com.alibaba.middleware.race;
+package com.alibaba.middleware.race.test;
 
+import com.alibaba.middleware.race.OrderSystem;
 import com.alibaba.middleware.race.table.BuyerTable;
 import com.alibaba.middleware.race.table.GoodTable;
 import com.alibaba.middleware.race.worker.LineReader;
@@ -79,9 +80,6 @@ public class SystemCheck {
                     raw.put(key, value);
                 }
                 result = GoodTable.getInstance().findFromFile(raw.get("goodid"));
-                if (lineCount == 251) {
-                    System.out.println();
-                }
                 for (Map.Entry<String, String> entry: raw.entrySet()) {
                     if (!result.get(entry.getKey()).equals(entry.getValue())) {
                         throw new RuntimeException("竟然不相等, raw:" + entry.getValue()
