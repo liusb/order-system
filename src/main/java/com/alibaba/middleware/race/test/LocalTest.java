@@ -2,7 +2,6 @@ package com.alibaba.middleware.race.test;
 
 import com.alibaba.middleware.race.OrderSystem;
 import com.alibaba.middleware.race.OrderSystemImpl;
-import com.alibaba.middleware.race.test.SystemCheck;
 
 import java.io.IOException;
 import java.util.*;

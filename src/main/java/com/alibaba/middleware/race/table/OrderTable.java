@@ -1,7 +1,6 @@
 package com.alibaba.middleware.race.table;
 
 import com.alibaba.middleware.race.cache.ThreadPool;
-import com.alibaba.middleware.race.cache.TwoLevelCache;
 import com.alibaba.middleware.race.index.HashIndex;
 import com.alibaba.middleware.race.index.RecordIndex;
 import com.alibaba.middleware.race.query.*;
@@ -20,33 +19,29 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
 public class OrderTable {
-    private static OrderTable instance = new OrderTable();
+    public static OrderTable instance = new OrderTable();
     public static OrderTable getInstance() {
         return instance;
     }
     private OrderTable() {}
 
-//    private TwoLevelCache<Long, HashMap<String, String>> resultCache;
-
-    public static final int BASE_SIZE = 1024;
+    public static final int BASE_SIZE = 1;
     private static final int GOOD_INDEX_BUCKET_SIZE = 64*BASE_SIZE;
     private static final int ORDER_INDEX_BUCKET_SIZE = 64*BASE_SIZE;
     private static final int BUYER_INDEX_BUCKET_SIZE = 128*BASE_SIZE;
-    private static final int FIRST_LEVEL_CACHE_SIZE = 32*BASE_SIZE;  // 0.21676k/record
-    private static final int SECOND_LEVEL_CACHE_SIZE = 32*BASE_SIZE;
 
     // 每页的大小，单位为byte
     private static final int GOOD_TABLE_PAGE_SIZE = 4*(1<<10);
-    // 存储索引为goodId, 存储格式为[goodId, orderId, buyerId, createTime, ......]
+    // 存储索引为goodId
     public HashTable goodIndex;
 
     private static final String[] INDEX_COLUMNS = {};   // 索引不需要列信息
     private static final int ORDER_INDEX_PAGE_SIZE = 4*(1<<10);  // 1KB
-    // 索引为orderId 记录存储格式为[orderId, fileId, address](long, byte, long)
+    // 索引为orderId
     public HashTable orderIndex;
 
     private static final int BUYER_INDEX_PAGE_SIZE = 4*(1<<10);
-    // 索引为buyerId, 记录存储格式为[createTime, buyerId, fileId, address](long, string, byte, long)
+    // 索引为buyerId
     public HashTable buyerIndex;
 
     public HashMap<String, Byte> orderFilesMap;
@@ -86,7 +81,6 @@ public class OrderTable {
         orderIndex.reopen();
         buyerIndex.reopen();
         this.prepared = true;
-//        resultCache = new TwoLevelCache<Long, HashMap<String, String>>(FIRST_LEVEL_CACHE_SIZE, SECOND_LEVEL_CACHE_SIZE);
         this.fileChannels = new AsynchronousFileChannel[this.sortOrderFiles.length];
         try {
             HashSet<StandardOpenOption>openOptions = new HashSet<StandardOpenOption>(
@@ -140,34 +134,10 @@ public class OrderTable {
         return result;
     }
 
-//    public HashMap<String, String> findOrder(RecordIndex recordIndex) {
-//        long cacheIndex = (recordIndex.getAddress()<<6)|recordIndex.getFileId();
-//        HashMap<String, String> result = resultCache.get(cacheIndex);
-//        if (result == null) {
-//            result = this.findOrderRecord(recordIndex);
-//            if (result != null) {
-//                resultCache.put(cacheIndex, result);
-//            }
-//        }
-//        return result;
-//    }
-
     public ArrayList<HashMap<String, String>> findOrders(ArrayList<RecordIndex> recordIndices) {
         ArrayList<HashMap<String, String>> results = new ArrayList<HashMap<String, String>>();
-        ArrayList<RecordIndex> notCache = new ArrayList<RecordIndex>();
-        HashMap<String, String> result;
-        long cacheIndex;
-        for (RecordIndex recordIndex: recordIndices) {
-            cacheIndex = (recordIndex.getAddress()<<6)|recordIndex.getFileId();
-//            result = resultCache.get(cacheIndex);
-//            if (result != null) {
-//                results.add(result);
-//            } else {
-                notCache.add(recordIndex);
-//            }
-        }
         try {
-            findOrderRecords(notCache, results);
+            findOrderRecords(recordIndices, results);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -191,23 +161,17 @@ public class OrderTable {
         latch.await();
         for (RecordAttachment attachment: attachments) {
             results.add(attachment.record);
-//            resultCache.put((attachment.recordIndex.getAddress() << 6) | attachment.recordIndex.getFileId(),
-//                    attachment.record);
         }
     }
 
     public ArrayList<ResultImpl> findByBuyer(String buyerId, long startTime, long endTime) {
         ArrayList<ResultImpl> results = new ArrayList<ResultImpl>();
         CountDownLatch waitForBuyer;
-        HashMap<String, String> buyerRecord; // = BuyerTable.getInstance().findFormCache(buyerId);
-//        if (buyerRecord == null) {
-            waitForBuyer = new CountDownLatch(1);
-            // 查找buyerRecord
-            buyerRecord = new HashMap<String, String>();
-            BuyerTable.getInstance().findBuyer(buyerId, waitForBuyer, buyerRecord);
-//        } else {
-//            waitForBuyer = new CountDownLatch(0);
-//        }
+        HashMap<String, String> buyerRecord;
+        waitForBuyer = new CountDownLatch(1);
+        // 查找buyerRecord
+        buyerRecord = new HashMap<String, String>();
+        BuyerTable.getInstance().findBuyer(buyerId, waitForBuyer, buyerRecord);
         CountDownLatch waitForResult = new CountDownLatch(1);
         BuyerCondition condition = new BuyerCondition(Data.getKeyPostfix(buyerId), startTime, endTime);
         int fileId = OrderTable.getInstance().buyerIndex.getIndex().getFileIndex(HashIndex.getHashCode(buyerId));
@@ -215,10 +179,12 @@ public class OrderTable {
         AsynchronousFileChannel fileChannel = buyerIndex.getFileChannel(fileId);
         byte[] buffer = new byte[BUYER_INDEX_PAGE_SIZE];
         Data data = new Data(buffer, DataPage.NextPos);
-        BuyerAttachment attachment = new BuyerAttachment(condition, buffer, waitForBuyer, buyerRecord, waitForResult, results);
+        BuyerAttachment attachment = new BuyerAttachment(condition, buffer, waitForBuyer,
+                buyerRecord, waitForResult, results);
         BuyerHandler buyerHandler = new BuyerHandler();
         while (pageId != -1) {
-            fileChannel.read(ByteBuffer.wrap(attachment.buffer), ((long)pageId*BUYER_INDEX_PAGE_SIZE), attachment, buyerHandler);
+            fileChannel.read(ByteBuffer.wrap(attachment.buffer),
+                    ((long)pageId*BUYER_INDEX_PAGE_SIZE), attachment, buyerHandler);
             // 等待结果
             while (true) {
                 try {

@@ -12,10 +12,7 @@ import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
 /**
- * 订单系统的demo实现，订单数据全部存放在内存中，用简单的方式实现数据存储和查询功能
- * 
- * @author wangxiang@alibaba-inc.com
- *
+ * 订单系统的实现
  */
 public class OrderSystemImpl implements OrderSystem {
 
@@ -29,14 +26,17 @@ public class OrderSystemImpl implements OrderSystem {
         manager.setGoodFiles(goodFiles);
         manager.setOrderFiles(orderFiles);
 
-//        printDir(orderFiles, "orderFiles");
-//        printDir(buyerFiles, "buyerFiles");
-//        printDir(goodFiles, "goodFiles");
-//        printDir(storeFolders, "storeFolders");
+        // 打印目录信息
+        printDir(orderFiles, "orderFiles");
+        printDir(buyerFiles, "buyerFiles");
+        printDir(goodFiles, "goodFiles");
+        printDir(storeFolders, "storeFolders");
 
         Thread managerThread = new Thread(manager);
         managerThread.setDaemon(true);
         managerThread.start();
+
+        // 等待构造完成
         while (!OrderTable.getInstance().isPrepared()) {
             if ((System.currentTimeMillis()-beginTime) > (60*60000-3000)) {
                 break;
@@ -57,11 +57,21 @@ public class OrderSystemImpl implements OrderSystem {
     }
 
 
+    private void waitForPrepared() {
+        while (!OrderTable.getInstance().isPrepared()) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
     /**
      * 查询订单号为orderid的指定字段
      * 实现：根据keys判断需要查询那几张表，再根据OrderId进行Hash查找索引，再根据索引读入对应的块，解析出对应的数据，
      *      再根据解析出来的数据使用hash查找Good表和Buyer表
-     *      TODO 索引按照[orderId, goodId, buyerId] 存储，当不需要Order表字段时没必要读Order表
      *
      * @param orderId
      *          订单号
@@ -70,13 +80,8 @@ public class OrderSystemImpl implements OrderSystem {
      * @return 查询结果，如果该订单不存在，返回null
      */
     public Result queryOrder(long orderId, Collection<String> keys) {
-        while (!OrderTable.getInstance().isPrepared()) {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
+        waitForPrepared();
+
         // 查找订单表
         RecordIndex orderIdRowIndex = OrderTable.getInstance().findOderIdIndex(orderId);
         if (orderIdRowIndex == null) {
@@ -121,21 +126,15 @@ public class OrderSystemImpl implements OrderSystem {
         CountDownLatch waitForBuyer = null;
         if (goodTableKeys == null || goodTableKeys.size() > 0) {
             String goodId = orderRecord.get("goodid");
-//            goodRecord = GoodTable.getInstance().findFromCache(goodId);
-//            if (goodRecord == null) {
-                goodRecord = new HashMap<String, String>();
-                waitForGood = new CountDownLatch(1);
-                GoodTable.getInstance().findGood(goodId, waitForGood, goodRecord);
-//            }
+            goodRecord = new HashMap<String, String>();
+            waitForGood = new CountDownLatch(1);
+            GoodTable.instance.findGood(goodId, waitForGood, goodRecord);
         }
         if (buyerTableKeys == null || buyerTableKeys.size() > 0) {
             String buyerId = orderRecord.get("buyerid");
-//            buyerRecord = BuyerTable.getInstance().findFormCache(buyerId);
-//            if (buyerRecord == null) {
-                buyerRecord = new HashMap<String, String>();
-                waitForBuyer = new CountDownLatch(1);
-                BuyerTable.getInstance().findBuyer(buyerId, waitForBuyer, buyerRecord);
-//            }
+            buyerRecord = new HashMap<String, String>();
+            waitForBuyer = new CountDownLatch(1);
+            BuyerTable.instance.findBuyer(buyerId, waitForBuyer, buyerRecord);
         }
         if (waitForBuyer != null) {
             try {
@@ -191,15 +190,8 @@ public class OrderSystemImpl implements OrderSystem {
      *          买家Id
      * @return 符合条件的订单集合，按照createtime大到小排列
      */
-    public Iterator<Result> queryOrdersByBuyer(long startTime, long endTime,
-      String buyerId) {
-        while (!OrderTable.getInstance().isPrepared()) {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
+    public Iterator<Result> queryOrdersByBuyer(long startTime, long endTime, String buyerId) {
+        waitForPrepared();
 
         return new ResultIterator(OrderTable.getInstance().findByBuyer(buyerId, startTime, endTime));
 
@@ -215,13 +207,7 @@ public class OrderSystemImpl implements OrderSystem {
      */
     public Iterator<Result> queryOrdersBySaler(String salerId, String goodId,
       Collection<String> keys) {
-        while (!OrderTable.getInstance().isPrepared()) {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
+        waitForPrepared();
 
         ArrayList<RecordIndex> goodRowIndex = OrderTable.getInstance().findGoodIdIndex(goodId);
         if (goodRowIndex.isEmpty()) {  // 没有销售记录
@@ -263,12 +249,9 @@ public class OrderSystemImpl implements OrderSystem {
         HashMap<String, String> goodRecord = null;
         CountDownLatch waitForGood = null;
         if (goodTableKeys == null || goodTableKeys.size() > 0) {
-//            goodRecord = GoodTable.getInstance().findFromCache(goodId);
-//            if (goodRecord == null) {
-                goodRecord = new HashMap<String, String>();
-                waitForGood = new CountDownLatch(1);
-                GoodTable.getInstance().findGood(goodId, waitForGood, goodRecord);
-//            }
+            goodRecord = new HashMap<String, String>();
+            waitForGood = new CountDownLatch(1);
+            GoodTable.getInstance().findGood(goodId, waitForGood, goodRecord);
         }
 
         HashMap<String, HashMap<String, String>> buyerRecords = null;
@@ -332,18 +315,13 @@ public class OrderSystemImpl implements OrderSystem {
      * @return 求和结果
      */
     public KeyValue sumOrdersByGood(String goodId, String key) {
-        while (!OrderTable.getInstance().isPrepared()) {
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
+        waitForPrepared();
+
         ArrayList<RecordIndex> goodRowIndex = OrderTable.getInstance().findGoodIdIndex(goodId);
         if (goodRowIndex.isEmpty()) {
             return null;
         }
-        HashMap<String, String> goodRecord = null;
+        HashMap<String, String> goodRecord;
         if (GoodTable.getInstance().baseTable.containColumn(key)) {
             goodRecord = GoodTable.getInstance().findFromFile(goodId);
             String value = goodRecord.get(key);
@@ -406,7 +384,8 @@ public class OrderSystemImpl implements OrderSystem {
     public static HashMap<String, KVImpl> joinResult(HashMap<String, String> orderRecord,
                                                  HashMap<String, String> buyerRecord,
                                                  HashMap<String, String> goodRecord) {
-        HashMap<String, KVImpl> result = new HashMap<String, KVImpl>();
+        HashMap<String, KVImpl> result = new HashMap<String, KVImpl>(
+                (int)Math.ceil((orderRecord.size()+buyerRecord.size()+goodRecord.size())/0.75));
         for (Map.Entry<String, String> entry: orderRecord.entrySet()) {
             result.put(entry.getKey(), new KVImpl(entry.getKey(), entry.getValue()));
         }

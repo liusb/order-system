@@ -3,7 +3,6 @@ package com.alibaba.middleware.race.table;
 
 import com.alibaba.middleware.race.cache.IndexEntry;
 import com.alibaba.middleware.race.cache.ThreadPool;
-import com.alibaba.middleware.race.cache.TwoLevelCache;
 import com.alibaba.middleware.race.query.IndexAttachment;
 import com.alibaba.middleware.race.query.IndexHandler;
 import com.alibaba.middleware.race.store.Data;
@@ -20,17 +19,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
 public class GoodTable {
-    private static GoodTable instance = new GoodTable();
+    public static GoodTable instance = new GoodTable();
     public static GoodTable getInstance() {
         return instance;
     }
     private GoodTable() { }
 
-//    private TwoLevelCache<String, HashMap<String, String>> resultCache;
-
-    private static final int FIRST_LEVEL_CACHE_SIZE = 8*OrderTable.BASE_SIZE;  //0.904k/record
-    private static final int SECOND_LEVEL_CACHE_SIZE = 8*OrderTable.BASE_SIZE;
-    
     private static final String[] TABLE_COLUMNS = {"goodid"};
     public Table baseTable;
 
@@ -55,7 +49,6 @@ public class GoodTable {
     }
 
     public void reopen() {
-//        resultCache = new TwoLevelCache<String, HashMap<String, String>>(FIRST_LEVEL_CACHE_SIZE, SECOND_LEVEL_CACHE_SIZE);
         this.fileChannels = new AsynchronousFileChannel[this.sortGoodFiles.length];
         try {
             HashSet<StandardOpenOption>openOptions = new HashSet<StandardOpenOption>(
@@ -70,20 +63,6 @@ public class GoodTable {
         }
     }
 
-//    public HashMap<String, String> find(String goodId) {
-//        HashMap<String, String> result = resultCache.get(goodId);
-//        if (result == null) {
-//            result = findFromFile(goodId);
-//            if (result != null) {
-//                resultCache.put(goodId, result);
-//            }
-//        }
-//        return result;
-//    }
-
-//    public HashMap<String, String> findFromCache(String buyerId) {
-//        return this.resultCache.get(buyerId);
-//    }
 
     public HashMap<String, String> findFromFile(String buyerId) {
         HashMap<String, String> result = new HashMap<String, String>();
@@ -141,15 +120,9 @@ public class GoodTable {
         for (HashMap<String, String> orderRecord: orderRecords) {
             goodIds.add(orderRecord.get("goodid"));
         }
-        HashMap<String, String> goodRecord;
         ArrayList<IndexEntry> noCache = new ArrayList<IndexEntry>();
         for (String goodId: goodIds) {
-//            goodRecord = resultCache.get(goodId);
-//            if (goodRecord != null) {
-//                results.put(goodId, goodRecord);
-//            } else {
-                noCache.add(indexCache.get(Data.getKeyPostfix(goodId)));
-//            }
+            noCache.add(indexCache.get(Data.getKeyPostfix(goodId)));
         }
         try {
             findGoodRecords(noCache, results);
@@ -175,11 +148,8 @@ public class GoodTable {
                     attachment, indexHandler);
         }
         latch.await();
-//        String goodId;
         for (IndexAttachment attachment: attachments) {
-//            goodId = attachment.record.get("goodid");
             results.put(attachment.record.get("goodid"), attachment.record);
-//            resultCache.put(goodId, attachment.record);
         }
     }
 

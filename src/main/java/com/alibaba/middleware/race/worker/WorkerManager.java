@@ -67,11 +67,11 @@ public class WorkerManager implements Runnable {
         GoodTable table = GoodTable.getInstance();
         table.init(this.goodFiles);
         ArrayList<LinkedBlockingQueue<OffsetLine>> inQueues = createQueues(PARSER_THREAD_NUM, IN_QUEUE_SIZE);
-        ArrayList<OffsetReader> readers = createOffsetReaders(table.sortGoodFiles, table.goodFilesMap.size(),
+        ArrayList<RecordReader> readers = createOffsetReaders(table.sortGoodFiles, table.goodFilesMap.size(),
                 inQueues, table.goodFilesMap.size());
         ArrayList<OffsetParser> parsers = createOffsetParser(inQueues, table.indexCache, table.baseTable);
         ArrayList<Thread> readerThreads = new ArrayList<Thread>();
-        for (OffsetReader reader: readers) {
+        for (RecordReader reader: readers) {
             readerThreads.add(new Thread(reader));
         }
         ArrayList<Thread> parserThreads = new ArrayList<Thread>();
@@ -99,11 +99,11 @@ public class WorkerManager implements Runnable {
         BuyerTable table = BuyerTable.getInstance();
         table.init(this.buyerFiles);
         ArrayList<LinkedBlockingQueue<OffsetLine>> inQueues = createQueues(PARSER_THREAD_NUM, IN_QUEUE_SIZE);
-        ArrayList<OffsetReader> readers = createOffsetReaders(table.sortBuyerFiles, table.buyerFilesMap.size(),
+        ArrayList<RecordReader> readers = createOffsetReaders(table.sortBuyerFiles, table.buyerFilesMap.size(),
                 inQueues, table.buyerFilesMap.size());
         ArrayList<OffsetParser> parsers = createOffsetParser(inQueues, table.indexCache, table.baseTable);
         ArrayList<Thread> readerThreads = new ArrayList<Thread>();
-        for (OffsetReader reader: readers) {
+        for (RecordReader reader: readers) {
             readerThreads.add(new Thread(reader));
         }
         ArrayList<Thread> parserThreads = new ArrayList<Thread>();
@@ -140,7 +140,7 @@ public class WorkerManager implements Runnable {
                 = createQueues(table.orderIndex.getPageFiles().size(), OUT_QUEUE_SIZE);
         ArrayList<LinkedBlockingQueue<BuyerIdRowIndex>> buyerIndexQueues
                 = createQueues(table.buyerIndex.getPageFiles().size(), OUT_QUEUE_SIZE);
-        ArrayList<OffsetReader> readers = createOffsetReaders(table.sortOrderFiles, table.orderFilesMap.size(),
+        ArrayList<RecordReader> readers = createOffsetReaders(table.sortOrderFiles, table.orderFilesMap.size(),
                 inQueues, ORDER_READER_THREAD_NUM);
         ArrayList<OrderParser> parsers = createOrderParser(inQueues, goodIndexQueues, orderIndexQueues, buyerIndexQueues,
                 goodIndexIndex, orderIndexIndex, buyerIndexIndex);
@@ -152,7 +152,7 @@ public class WorkerManager implements Runnable {
                 table.buyerIndex.getPageFiles(), buyerIndexIndex);
 
         ArrayList<Thread> readerThreads = new ArrayList<Thread>();
-        for (OffsetReader reader: readers) {
+        for (RecordReader reader: readers) {
             readerThreads.add(new Thread(reader));
         }
         ArrayList<Thread> parserThreads = new ArrayList<Thread>();
@@ -267,7 +267,7 @@ public class WorkerManager implements Runnable {
         metric.addQueue(name, addQueues);
     }
 
-    private static ArrayList<OffsetReader> createOffsetReaders(String[] sortedFiles, int size,
+    private static ArrayList<RecordReader> createOffsetReaders(String[] sortedFiles, int size,
                                                          ArrayList<LinkedBlockingQueue<OffsetLine>> inQueues,
                                                          int readThreadNum) {
         if (readThreadNum < size) {
@@ -280,9 +280,9 @@ public class WorkerManager implements Runnable {
         for (int i=0; i<size; i++) {
             fileSplits.get(i%readThreadNum).put(sortedFiles[i], (byte)i);
         }
-        ArrayList<OffsetReader> readers = new ArrayList<OffsetReader>();
+        ArrayList<RecordReader> readers = new ArrayList<RecordReader>();
         for (HashMap<String, Byte> spilt: fileSplits) {
-            readers.add(new OffsetReader(spilt, inQueues));
+            readers.add(new RecordReader(spilt, inQueues));
         }
         return readers;
     }

@@ -9,6 +9,7 @@ import com.alibaba.middleware.race.store.DataPage;
 import com.alibaba.middleware.race.store.PageStore;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -16,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.concurrent.Future;
 
 
 public class HashTable extends Table {
@@ -123,6 +125,47 @@ public class HashTable extends Table {
         }
     }
 
+    public RecordIndex findIndexAio(long orderId) {
+        int hashCode = HashIndex.getHashCode(orderId);
+        int fileId = index.getFileIndex(hashCode);
+        PageStore pageStore = storeFiles.get(index.getFileIndex(hashCode));
+        int bucketIndex = index.getBucketId(hashCode);
+        if (!pageStore.isBucketUsed(bucketIndex)) {
+            return null;
+        }
+        Data data;
+        int dataLen;
+        byte[] buffer = new byte[4*1024];
+        Future<Integer> readFuture = fileChannels[fileId].read(ByteBuffer.wrap(buffer), ((long) bucketIndex) * 4 * 1024);
+        long readOrderId;
+        try {
+            while (true) {
+                readFuture.get();
+                data = new Data(buffer);
+                dataLen = data.readInt();
+                bucketIndex = data.readInt();
+                if (bucketIndex != -1) {
+                    buffer = new byte[4 * 1024];
+                    readFuture = fileChannels[fileId].read(ByteBuffer.wrap(buffer), ((long) bucketIndex) * 4 * 1024);
+                }
+                while (data.getPos() < dataLen) {
+                    readOrderId = data.readLong();
+                    if (readOrderId != orderId) {
+                        data.skip(1 + 4);
+                    } else {
+                        return new RecordIndex(data.readByte(), data.readInt());
+                    }
+                }
+                if (bucketIndex == -1) {
+                    return null;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     public ArrayList<RecordIndex> findIndex(String goodId) {
         ArrayList<RecordIndex> results = new ArrayList<RecordIndex>();
         int hashCode = HashIndex.getHashCode(goodId);
@@ -155,4 +198,47 @@ public class HashTable extends Table {
         return results;
     }
 
+    public ArrayList<RecordIndex> findIndexAio(String goodId) {
+        ArrayList<RecordIndex> results = new ArrayList<RecordIndex>();
+        int hashCode = HashIndex.getHashCode(goodId);
+        int fileId = index.getFileIndex(hashCode);
+        PageStore pageStore = storeFiles.get(index.getFileIndex(hashCode));
+        int bucketIndex = index.getBucketId(hashCode);
+        if (!pageStore.isBucketUsed(bucketIndex)) {
+            return results;
+        }
+        long postfix = Data.getKeyPostfix(goodId);
+        long readPostfix;
+        Data data;
+        int dataLen;
+        byte[] buffer = new byte[4*1024];
+        Future<Integer> readFuture = fileChannels[fileId].read(ByteBuffer.wrap(buffer), ((long) bucketIndex) * 4 * 1024);
+        try {
+            while (true) {
+                readFuture.get();
+                data = new Data(buffer);
+                dataLen = data.readInt();
+                bucketIndex = data.readInt();
+                if (bucketIndex != -1) {
+                    buffer = new byte[4 * 1024];
+                    readFuture = fileChannels[fileId].read(ByteBuffer.wrap(buffer), ((long) bucketIndex) * 4 * 1024);
+                }
+                while (data.getPos() < dataLen) {
+                    readPostfix = data.readLong();
+                    if (readPostfix == postfix) {
+                        RecordIndex result = new RecordIndex(data.readByte(), data.readInt());
+                        results.add(result);
+                    } else {
+                        data.skip(1 + 4);
+                    }
+                }
+                if (bucketIndex == -1) {
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return results;
+    }
 }

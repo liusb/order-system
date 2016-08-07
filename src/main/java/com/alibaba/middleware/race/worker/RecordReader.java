@@ -13,11 +13,11 @@ import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-public class OffsetReader implements Runnable {
+public class RecordReader implements Runnable {
     private ArrayList<LinkedBlockingQueue<OffsetLine>> outs;
     private HashMap<String, Byte> files;
 
-    public OffsetReader(HashMap<String, Byte> files, ArrayList<LinkedBlockingQueue<OffsetLine>> outs) {
+    public RecordReader(HashMap<String, Byte> files, ArrayList<LinkedBlockingQueue<OffsetLine>> outs) {
         this.outs = outs;
         this.files = files;
     }
